@@ -1,0 +1,31 @@
+---
+title: "LLM Document Summarizer"
+company: "JP Morgan Chase"
+role: "Product Manager"
+startDate: "Apr 2024"
+endDate: "Jul 2024"
+teamSize: "5"
+summary: "Prototyped an LLM pipeline to auto-summarize lengthy compliance documents for analyst review."
+tags: ["LLMs", "Python", "AI Agents", "Compliance"]
+metrics:
+  - value: "5×"
+    label: "Faster doc review"
+---
+
+## Problem
+
+Compliance analysts spent hours reading dense 40–100 page regulatory documents before they could begin actual review work. This was pure overhead — no analytical value.
+
+## Solution
+
+I scoped a prototype LLM summarization pipeline that:
+
+- Chunked documents by section and ran structured extraction
+- Generated executive summaries with key obligations, deadlines, and risk flags highlighted
+- Surfaced a confidence score so analysts knew when to read the full source
+
+Built using GPT-4 with a custom prompt chain, deployed as an internal tool via a lightweight Flask API.
+
+## Outcome
+
+Document review time dropped 5×. The prototype was adopted by 3 analyst teams within 6 weeks, and is currently being productionized by the core AI platform team.
