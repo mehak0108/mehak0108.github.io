@@ -1,0 +1,51 @@
+---
+title: "Gaia Portal — Internal Service Marketplace"
+company: "JP Morgan Chase"
+role: "Product Developer"
+startDate: ""
+endDate: ""
+teamSize: "4"
+summary: "Led end-to-end development of Gaia Portal, a unified internal service marketplace that transformed how engineers across JP Morgan discovered, provisioned, and managed infrastructure services across Cloud Foundry and Kubernetes."
+tags: ["Platform Product", "Developer Experience", "Infrastructure", "Spring Boot", "Kubernetes"]
+metrics:
+  - value: "85%"
+    label: "Faster catalog load"
+  - value: "85%"
+    label: "Faster deployments"
+  - value: "40%"
+    label: "Fewer support tickets"
+  - value: "99.9%"
+    label: "Platform uptime"
+externalLinks:
+  - label: "View Full Case Study"
+    url: "https://docs.google.com/document/d/1jrMB7YAu-iJPDQiYfWu8wE4pHjvadblV/edit?usp=sharing&ouid=100358671322377485595&rtpof=true&sd=true"
+---
+
+## Problem
+
+JP Morgan's Global Technology Infrastructure team ran Service Fabric — enterprise middleware spanning Cloud Foundry and Kubernetes. But as the service catalog grew, there was no single place for developers to find or consume services. Every provisioning request required knowing upfront which platform a service lived on, triggering multiple serial API hops and fresh token calls on every page load.
+
+Three problems compounded each other: no unified discovery, poor API performance (~500ms per catalog request), and operational blindness — incidents were only detected when developers filed manual support tickets, not by the system itself.
+
+## Solution
+
+I framed this as a product problem before an engineering one: how do you build a self-serve marketplace where thousands of developers can find and consume services without friction, manual steps, or operational blind spots?
+
+The solution was Gaia Portal — a platform-agnostic service marketplace with four core bets:
+
+- **Catalog API with DB caching** — persisted the service catalog in Oracle DB instead of calling the Open Service Broker on every request, eliminating redundant token overhead and decoupling the portal from OSB availability
+- **Automated CI/CD pipeline** — replaced a fully manual 2–4 hour per-environment deployment process with a Jenkins pipeline across all GKP clusters, reproducible in ~15 minutes
+- **Observability layer** — built a Canary test suite continuously validating create/bind/unbind/delete flows, with a GTF Rules Engine routing alerts to the right team based on error source, eliminating manual triage
+- **Provider certification gate** — a 20-test automated validation suite every service provider had to pass before listing on the marketplace, standardising the OSB contract across all providers
+
+## Outcome
+
+Catalog response time dropped from ~500ms to ~75ms (85% faster). 
+
+Deployment time per environment fell from 2–4 hours to ~15 minutes. 
+
+The automated Error Details API reduced developer support tickets by an estimated 40%. 
+
+Incident detection time went from hours of manual discovery to automated alerts in under 5 minutes. 
+
+The platform launched to multi-cluster high availability with a 99.9% uptime target, validated through Eris chaos engineering experiments before production release.

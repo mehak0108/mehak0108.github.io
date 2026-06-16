@@ -1,0 +1,45 @@
+---
+title: "OSB Certification Suite — Service Provider Quality Gate"
+company: "JP Morgan Chase"
+role: "Product Developer"
+startDate: ""
+endDate: ""
+teamSize: "3"
+summary: "Designed and built an async certification suite that every service provider must pass before listing on JP Morgan's internal cloud marketplace — enforcing OSB contract compliance, shifting quality left, and making onboarding fully self-serve."
+tags: ["Platform Product", "Developer Experience", "Compliance", "Infrastructure", "Cloud Foundry"]
+metrics:
+  - value: "85%"
+    label: "Faster time-to-list"
+  - value: "100%"
+    label: "Providers certified pre-listing"
+  - value: "20"
+    label: "Automated test cases"
+  - value: "0"
+    label: "Manual reviews needed"
+  - value: "Audit-ready"
+    label: "Compliance trail on record"
+coverImage: /images/projects/osb.png
+externalLinks:
+  - label: "View Full Case Study"
+    url: "https://docs.google.com/document/d/1nUVK5Lovn2UabENfdrCCwEabZOXYR743/edit?usp=sharing&ouid=100358671322377485595&rtpof=true&sd=true"
+
+---
+
+## Problem
+
+As service providers onboarded to cloud marketplace a critical gap emerged: there was no enforced standard for how each provider implemented the Open Service Broker (OSB) API. Providers built their own OSB implementations independently. The platform had no reliable way to interpret non-standard responses, handle edge cases consistently, or demonstrate pre-onboarding validation to internal audit teams.
+
+This created three compounding risks: unpredictable runtime failures when Cloud Foundry hit a malformed provider response, orphaned resources when unbind/delete flows were incorrectly implemented, and a compliance gap — no documented evidence that any service had been validated before going live on a platform handling sensitive financial data.
+
+## Solution
+
+I designed the certification suite as a quality gate. A service cannot be listed on the marketplace until it passes all 20 tests. The core design decisions:
+
+- **Async execution** — tests run in the background without blocking the onboarding UI; providers get a link to a live report that updates as each test completes
+- **Full lifecycle coverage** — tests span all four OSB operations (create, bind, unbind, delete) including error codes, malformed responses, timeout behavior, retry handling, and orphan prevention on delete
+- **Self-serve report** — per-test pass/fail status with structured failure descriptions lets providers diagnose and fix issues without contacting the platform team
+- **Compliance-aligned criteria** — test cases extend beyond the OSB spec to cover JP Morgan's enterprise standards for error handling and resource cleanup, producing a timestamped certification record for every listed service
+
+## Outcome
+
+Provider time-to-list dropped from 3–4 months to ~2 weeks, an **85% reduction**, as the async certification suite replaced a manual review cycle with structured, self-serve feedback. Each new infrastructure service became available to consuming teams ~12 weeks earlier per onboarding cycle. Post-onboarding support escalations caused by inconsistent OSB behavior dropped significantly, and every listed service now carries a timestamped certification record, shifting compliance posture from reactive to proactive before any service reaches the platform.

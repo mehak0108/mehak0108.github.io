@@ -62,12 +62,11 @@ function BriefcaseIcon() {
   );
 }
 
-function ExternalLinkIcon() {
+function ArrowUpRightIcon() {
   return (
-    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-      <polyline points="15 3 21 3 21 9"/>
-      <line x1="10" y1="14" x2="21" y2="3"/>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="7" y1="17" x2="17" y2="7"/>
+      <polyline points="7 7 17 7 17 17"/>
     </svg>
   );
 }
@@ -120,16 +119,16 @@ export default async function CaseStudyPage({
       {/* Hero */}
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '56px 120px 0' }}>
 
-        {/* Company + type pill row */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
+        {/* Company + tags pill row */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: 'rgba(255,255,255,0.8)', border: '0.5px solid var(--color-border-strong)', borderRadius: '50px', padding: '4px 14px', fontSize: '12px', fontWeight: 500, color: 'var(--color-accent)' }}>
             {fm.company}
           </span>
-          {fm.tags && fm.tags[0] && (
-            <span style={{ display: 'inline-flex', alignItems: 'center', background: 'var(--color-surface)', border: '0.5px solid var(--color-border)', borderRadius: '50px', padding: '4px 14px', fontSize: '12px', color: 'var(--color-muted)' }}>
-              {fm.tags[0]}
+          {fm.tags && fm.tags.map(tag => (
+            <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', background: 'var(--color-surface)', border: '0.5px solid var(--color-border)', borderRadius: '50px', padding: '4px 14px', fontSize: '12px', color: 'var(--color-muted)' }}>
+              {tag}
             </span>
-          )}
+          ))}
         </div>
 
         {/* Title */}
@@ -146,22 +145,40 @@ export default async function CaseStudyPage({
           {fm.title}
         </h1>
 
-        {/* Meta row */}
-        <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap', marginBottom: '36px' }}>
-          {fm.role && (
-            <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'var(--color-body)' }}>
-              <span style={{ color: 'var(--color-accent)' }}><BriefcaseIcon /></span> {fm.role}
-            </span>
-          )}
-          {fm.startDate && (
-            <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'var(--color-body)' }}>
-              <span style={{ color: 'var(--color-accent)' }}><CalendarIcon /></span> {fm.startDate} — {fm.endDate}
-            </span>
-          )}
-          {fm.teamSize && (
-            <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'var(--color-body)' }}>
-              <span style={{ color: 'var(--color-accent)' }}><UsersIcon /></span> {fm.teamSize} person team
-            </span>
+        {/* Meta row, with case study link button */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '24px', flexWrap: 'wrap', marginBottom: '36px' }}>
+          <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
+            {fm.role && (
+              <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'var(--color-body)' }}>
+                <span style={{ color: 'var(--color-accent)' }}><BriefcaseIcon /></span> {fm.role}
+              </span>
+            )}
+            {fm.startDate && (
+              <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'var(--color-body)' }}>
+                <span style={{ color: 'var(--color-accent)' }}><CalendarIcon /></span> {fm.startDate} — {fm.endDate}
+              </span>
+            )}
+            {fm.teamSize && (
+              <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'var(--color-body)' }}>
+                <span style={{ color: 'var(--color-accent)' }}><UsersIcon /></span> {fm.teamSize} person team
+              </span>
+            )}
+          </div>
+
+          {fm.externalLinks && fm.externalLinks.length > 0 && (
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              {fm.externalLinks.map(link => (
+                <a
+                  key={link.url}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', border: '1px solid var(--color-accent)', borderRadius: '50px', padding: '8px 18px', fontSize: '13px', fontWeight: 500, color: 'var(--color-accent)', textDecoration: 'none', background: 'transparent' }}
+                >
+                  {link.label} <ArrowUpRightIcon />
+                </a>
+              ))}
+            </div>
           )}
         </div>
 
@@ -177,84 +194,61 @@ export default async function CaseStudyPage({
           </div>
         )}
 
-        {/* Cover image / placeholder */}
-        <div style={{ width: '100%', height: '320px', borderRadius: '14px', overflow: 'hidden', background: 'linear-gradient(135deg, var(--color-heading) 0%, #1E3A5F 100%)', marginBottom: '0' }}>
-          {fm.coverImage && (
-            <img src={fm.coverImage} alt={fm.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          )}
-        </div>
+        {/* Cover image (optional) — shown in a browser-chrome mockup frame */}
+        {fm.coverImage && (
+          <div style={{ width: '100%', borderRadius: '14px', overflow: 'hidden', boxShadow: '0 8px 30px rgba(43,108,176,0.12)', border: '0.5px solid var(--color-border)' }}>
+            {/* Chrome bar */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '12px 16px', background: 'var(--color-heading)' }}>
+              <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#FF5F57' }} />
+                <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#FEBC2E' }} />
+                <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#28C840' }} />
+              </div>
+              <div style={{ flex: 1, background: 'rgba(255,255,255,0.08)', borderRadius: '6px', padding: '4px 12px', fontSize: '11px', color: 'rgba(255,255,255,0.5)', textAlign: 'center', maxWidth: '360px', margin: '0 auto', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                {fm.title}
+              </div>
+              <div style={{ width: '40px', flexShrink: 0 }} />
+            </div>
+            {/* Screenshot */}
+            <div style={{ background: '#fff', padding: '24px', display: 'flex', justifyContent: 'center' }}>
+              <img src={fm.coverImage} alt={fm.title} style={{ width: '100%', maxHeight: '480px', objectFit: 'contain' }} />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Content */}
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '48px 120px 64px', display: 'grid', gridTemplateColumns: '1fr 280px', gap: '64px', alignItems: 'start' }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '48px 120px 64px' }}>
+        {fm.summary && (
+          <p style={{ fontSize: '16px', color: 'var(--color-body)', lineHeight: 1.75, marginBottom: '36px', paddingBottom: '36px', borderBottom: '0.5px solid var(--color-border)', fontWeight: 400 }}>
+            {fm.summary}
+          </p>
+        )}
 
-        {/* Main prose */}
-        <div>
-          {fm.summary && (
-            <p style={{ fontSize: '16px', color: 'var(--color-body)', lineHeight: 1.75, marginBottom: '36px', paddingBottom: '36px', borderBottom: '0.5px solid var(--color-border)', fontWeight: 400 }}>
-              {fm.summary}
-            </p>
-          )}
+        <article style={{ fontSize: '15px', color: 'var(--color-body)', lineHeight: 1.8 }} className="mdx-prose">
+          <MDXContent />
+        </article>
 
-          <article style={{ fontSize: '15px', color: 'var(--color-body)', lineHeight: 1.8 }} className="mdx-prose">
-            <MDXContent />
-          </article>
-        </div>
-
-        {/* Sidebar */}
-        <div style={{ position: 'sticky', top: '72px' }}>
-          {/* Tags */}
-          {fm.tags && fm.tags.length > 0 && (
-            <div style={{ marginBottom: '28px' }}>
-              <p style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--color-muted)', marginBottom: '10px' }}>Tags</p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                {fm.tags.map(tag => (
-                  <span key={tag} style={{ fontSize: '12px', color: 'var(--color-body)', border: '0.5px solid var(--color-border)', background: '#fff', borderRadius: '50px', padding: '4px 12px' }}>
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* External links */}
-          {fm.externalLinks && fm.externalLinks.length > 0 && (
-            <div style={{ marginBottom: '28px' }}>
-              <p style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--color-muted)', marginBottom: '10px' }}>Links</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {fm.externalLinks.map(link => (
-                  <a
-                    key={link.url}
-                    href={link.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 500, color: 'var(--color-accent)', textDecoration: 'none' }}
-                  >
-                    <ExternalLinkIcon /> {link.label}
-                  </a>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Next project */}
-          {nextProject && nextProject.link !== `/${params.slug}` && (
-            <div style={{ borderTop: '0.5px solid var(--color-border)', paddingTop: '20px' }}>
-              <p style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--color-muted)', marginBottom: '10px' }}>Next project</p>
-              <Link
-                href={nextProject.link}
-                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, color: 'var(--color-accent)', textDecoration: 'none' }}
+        {fm.externalLinks && fm.externalLinks.length > 0 && (
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', flexWrap: 'wrap', marginTop: '40px' }}>
+            {fm.externalLinks.map(link => (
+              <a
+                key={link.url}
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', border: '1px solid var(--color-heading)', borderRadius: '50px', padding: '10px 24px', fontSize: '13px', fontWeight: 500, color: '#fff', textDecoration: 'none', background: 'var(--color-heading)' }}
               >
-                {nextProject.title} <ArrowRightIcon />
-              </Link>
-            </div>
-          )}
-        </div>
+                {link.label} <ArrowUpRightIcon />
+              </a>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Bottom bar */}
       <div style={{ borderTop: '0.5px solid var(--color-border)', background: '#fff' }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px 120px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px 120px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '24px' }}>
           <Link
             href="/#projects"
             style={{ display: 'flex', alignItems: 'center', gap: '7px', fontSize: '13px', fontWeight: 500, color: 'var(--color-body)', textDecoration: 'none' }}
@@ -262,6 +256,14 @@ export default async function CaseStudyPage({
             <ArrowLeftIcon /> Back to portfolio
           </Link>
           <span style={{ fontSize: '12px', color: 'var(--color-muted)' }}>© 2026 Mehak Mittal</span>
+          {nextProject && (
+            <Link
+              href={nextProject.link}
+              style={{ display: 'flex', alignItems: 'center', gap: '7px', fontSize: '13px', fontWeight: 600, color: 'var(--color-accent)', textDecoration: 'none' }}
+            >
+              Next: {nextProject.title} <ArrowRightIcon />
+            </Link>
+          )}
         </div>
       </div>
     </div>

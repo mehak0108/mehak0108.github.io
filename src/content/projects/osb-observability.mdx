@@ -1,0 +1,42 @@
+---
+title: "OSB Observability Layer — Proactive Fault Detection & Alerting"
+company: "JP Morgan Chase"
+role: "Sole designer of the observability architecture"
+endDate: "Q4 2021"
+teamSize: "3"
+summary: "Designed and deployed a two-layer observability system across JPMC's internal service marketplace — synthetic canary testing plus conditional alert routing — cutting fault detection time by 97% and eliminating the cross-team war rooms that preceded every incident."
+tags: ["Platform Product", "Observability", "Infrastructure", "Incident Response"]
+metrics:
+  - value: "97%"
+    label: "Faster fault detection"
+  - value: "75%"
+    label: "Faster resolution"
+  - value: "650 hrs"
+    label: "Triage time reclaimed/yr"
+  - value: "6 of 6"
+    label: "Pools with live health coverage"
+coverImage: /images/projects/observability.png
+externalLinks:
+  - label: "View Full Case Study"
+    url: "https://docs.google.com/document/d/1iiMSDRVt1u2d8Xm1g04UGUvjGRzEzEA8/edit?usp=sharing&ouid=100358671322377485595&rtpof=true&sd=true"
+---
+
+## Problem
+
+JPMC's internal service marketplace runs on the Open Service Broker (OSB) protocol, with ~20 internal teams exposing services across 6 datacenter pools. When a Create, Bind, Unbind, or Delete operation failed, the platform had no way to tell whether the fault was in the Gaia platform itself or in a specific provider's OSB implementation. Every failure escalated into a cross-team war room, with engineers spending 60–90 minutes just agreeing on fault domain before anyone started fixing anything.
+
+Detection was entirely reactive — failures surfaced only when a developer hit them and filed a ticket, often hours after the fault began. Pool-specific failures were nearly invisible: a service that worked in one pool but failed in another looked like a non-reproducible, intermittent bug. Alert channels were shared across all 20 providers, so teams couldn't distinguish their own failures from someone else's — leading to alert fatigue and missed critical signals. Leadership had no way to assess marketplace health without manually correlating incident tickets.
+
+## Solution
+
+Discovery across service providers, platform engineering, and Service Fabric leadership surfaced the root gap: no synthetic testing existed anywhere in the OSB request path, so every failure signal came from real developer traffic. I evaluated four alternatives — enhanced logging, provider self-monitoring, stricter ticketing SLAs, and canary testing without routing — and rejected all of them as either still-reactive or noise-generating at scale.
+
+The solution was a two-layer system, since neither layer alone was sufficient:
+
+- **Canary test suite** — continuously exercises all four OSB operations against every provider's endpoint in every pool, on a 5-minute cadence, isolated from real developer traffic. At 20 providers × 6 pools × 4 operations, this generates ~138,000 automated test executions per day. Because the canary runs an identical test service alongside each provider's, it definitively separates platform-side faults from provider-side faults — if only one provider fails while everyone else passes, the fault is theirs.
+- **GTF Rules Engine integration** — rather than building a new alerting system, I integrated with JPMC's existing Rules Engine to route canary results with conditional logic: provider-scoped alerts only reach the responsible team, platform-side faults route only to platform engineering, a flap filter requires two consecutive failures before alerting, and recovery notifications close the loop automatically.
+- **Grafana dashboard** — a live health matrix serving both providers (their own 4×6 operation/pool grid) and Service Fabric leadership (all 20 providers at a glance), replacing what used to require an incident ticket or a call to assess.
+
+## Outcome
+
+Mean time to detection dropped from 2–8 hours to ~5 minutes — failures are now caught within one canary cycle, at any hour, before a developer is affected. Mean time to resolution fell from 3–5 hours to ~60 minutes, driven almost entirely by eliminating the fault-attribution phase. Cross-team incident calls dropped from ~4/week to ~1/week, with the residual calls being genuine shared-infrastructure issues rather than routine attribution investigations. An estimated 650+ engineer-hours per year were reclaimed from triage, and for the first time, all 6 pools had live health coverage with an objective accountability view for OSB implementation quality across all 20 provider teams.

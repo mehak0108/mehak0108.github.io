@@ -1,9 +1,12 @@
 import createMDX from '@next/mdx';
+import remarkFrontmatter from 'remark-frontmatter';
 
 const withMDX = createMDX({
   options: {
     // Disable @mdx-js/react provider to avoid SSR createContext errors
     providerImportSource: undefined,
+    // Parse and strip YAML frontmatter so it isn't rendered as page content
+    remarkPlugins: [remarkFrontmatter],
   },
 });
 

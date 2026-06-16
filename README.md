@@ -101,8 +101,9 @@ tags: [AI/ML, Product Strategy]
 metrics:
   - value: "40%"
     label: Faster reviews
+coverImage: /images/projects/my-project.png  # optional — omit for no cover image
 externalLinks:
-  - label: View deck
+  - label: View Full Case Study
     url: https://notion.so/...
 ---
 
@@ -114,6 +115,9 @@ Write your case study here in markdown...
 
 ...
 ```
+
+- `coverImage` is **optional**. If omitted, no cover image/placeholder is shown below the metrics bar.
+- `externalLinks` is **optional**. Each entry renders as an outline button (e.g. "View Full Case Study ↗") in the meta row, opening in a new tab.
 
 ### Category reference
 

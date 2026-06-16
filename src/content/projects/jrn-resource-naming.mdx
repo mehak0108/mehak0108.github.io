@@ -1,0 +1,49 @@
+---
+title: "JP Morgan Resource Naming (JRN) — Standardizing Workload Attribution"
+company: "JP Morgan Chase"
+role: "Software Associate, Global Technology Infrastructure"
+startDate: "Q1 2022"
+endDate: "Q3 2022"
+teamSize: "4"
+summary: "Designed and led delivery of JP Morgan Resource Naming (JRN), a structured naming standard enforced via platform gates across Gaia Cloud Foundry and Kubernetes — fixing workload cost attribution for 80+ teams and turning a 22-day manual billing cycle into 4 days."
+tags: ["Platform Product", "FinOps", "Infrastructure", "Governance", "Kubernetes"]
+metrics:
+  - value: "97%"
+    label: "Attribution coverage (from 61%)"
+  - value: "82%"
+    label: "Faster billing cycle"
+  - value: "$3.8M"
+    label: "Charges correctly allocated"
+  - value: "80+"
+    label: "Teams onboarded"
+coverImage: /images/projects/jrn.png
+externalLinks:
+  - label: "View Full Case Study"
+    url: "https://docs.google.com/document/d/1Ivk5z2qm_Vw06c_dHZNcTgQ5K4QrUdLt/edit?usp=sharing&ouid=100358671322377485595&rtpof=true&sd=true"
+---
+
+## Problem
+
+GTI's internal chargeback process depended on a critical assumption: that every workload on JPMC's private cloud platform (Gaia CF and GKP) could be reliably linked to an owning line of business, division, and team. In practice, ~40% of workloads carried no structured ownership metadata — names like "payment-svc" or "test-app-1" gave billing no signal about which business unit had provisioned them.
+
+The fallout reached four stakeholder groups: Finance was manually reconciling workload lists against ServiceNow tickets, burning 3–4 analysts and 22 business days per billing cycle. Division finance leads were fielding challenged cost allocations. Platform engineering had no reliable inventory of what was running or who owned it. Security Operations couldn't quickly identify an owning team during an incident.
+
+## Solution
+
+I led discovery across four stakeholder groups — Finance, 14 GTI tech leads, platform engineering, and solution architects — before evaluating five alternative approaches (CF org/space remapping, namespace isolation, optional labels, CMDB registration, a custom metadata service). All five either relied on voluntary compliance that had already failed, or required disruptive platform restructuring.
+
+The solution was JP Morgan Resource Naming (JRN) — inspired by AWS's ARN — a self-describing, platform-agnostic, machine-parseable naming schema enforced as a hard deployment gate, not a recommendation:
+
+```
+jpmc:<lob>:<division>:<team>:<environment>:<datacenter>:<platform>:<workload-id>
+```
+
+Enforcement ran through two platform-level gates: a CF API pre-provisioning hook that rejects non-compliant `cf push` commands, and a Kubernetes `ValidatingAdmissionWebhook` that rejects non-conforming Deployments, StatefulSets, CronJobs, and DaemonSets — plus a CI/CD linting step catching violations even earlier, at the pull-request stage.
+
+For the ~4,800 already-deployed non-compliant workloads, I ran a parallel retroactive migration: an automated inventory script cross-referenced ServiceNow records to infer ownership, teams confirmed via a pre-populated spreadsheet, and validated workloads were renamed programmatically. Rollout was phased across 12 weeks — pilot, warn-only expansion, then full enforcement.
+
+## Outcome
+
+Workload attribution coverage rose from 61% to 97%. Billing cycle resolution time dropped from 22 business days to 4 — an 82% reduction. $3.8M in previously unattributed annual platform charges was correctly allocated, with residual unallocated charges falling 93% to under $250K. Billing disputes per quarter fell from ~52 to ~7. Manual reconciliation effort dropped from ~3.5 FTE per cycle to under 0.5 FTE.
+
+The migration also surfaced 120 ownerless legacy workloads, which were decommissioned — recovering ~$180K/year in idle capacity. JRN's platform-agnostic schema later extended to JPMC's public cloud workloads without redesign, and its CI linting module was adopted by teams beyond GTI as part of the firm's platform engineering golden path.
