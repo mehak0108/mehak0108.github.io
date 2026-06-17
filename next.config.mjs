@@ -14,7 +14,6 @@ const withMDX = createMDX({
 const nextConfig = {
   output: 'export',
   images: { unoptimized: true },
-  // TODO: set basePath to '/your-repo-name' before deploying to GitHub Pages
   basePath: '',
   trailingSlash: true,
   pageExtensions: ['js', 'jsx', 'md', 'mdx', 'ts', 'tsx'],
