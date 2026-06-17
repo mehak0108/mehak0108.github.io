@@ -1,3 +1,76 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  --color-bg: #F0F4F9;
+  --color-surface: #F8FAFD;
+  --color-accent: #2B6CB0;
+  --color-accent-hover: #1E4F8C;
+  --color-heading: #1A2332;
+  --color-body: #4A5A6E;
+  --color-muted: #7A8A9E;
+  --color-border: #C8D6E8;
+  --color-border-strong: #9AB0C8;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-body);
+  font-family: var(--font-inter), Inter, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+strong {
+  color: var(--color-heading);
+  font-weight: 700;
+}
+
+/* MDX prose styles */
+.mdx-prose h2 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-heading);
+  margin: 32px 0 12px;
+  padding-top: 32px;
+  border-top: 0.5px solid var(--color-border);
+}
+.mdx-prose h2:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+.mdx-prose h3 {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-heading);
+  margin: 20px 0 8px;
+}
+.mdx-prose p { margin-bottom: 14px; }
+.mdx-prose ul { padding-left: 20px; margin-bottom: 14px; }
+.mdx-prose li { margin-bottom: 6px; }
+.mdx-prose table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 13px; }
+.mdx-prose th { background: var(--color-surface); padding: 8px 12px; text-align: left; border: 0.5px solid var(--color-border); font-weight: 600; color: var(--color-heading); }
+.mdx-prose td { padding: 8px 12px; border: 0.5px solid var(--color-border); color: var(--color-body); }
+
+/* Responsive: contact grid */
+@media (max-width: 768px) {
+  .contact-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .life-masonry {
+    column-count: 2 !important;
+  }
+}
+@media (max-width: 480px) {
+  .life-masonry {
+    column-count: 1 !important;
+  }
+}

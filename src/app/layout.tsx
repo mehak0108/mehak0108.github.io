@@ -1,7 +1,22 @@
 import type { Metadata } from 'next';
-import { ThemeProvider } from 'next-themes';
+import { Inter, Playfair_Display } from 'next/font/google';
 import { siteConfig } from '@/config';
 import './globals.css';
+
+const inter = Inter({
+  subsets: ['latin'],
+  weight: ['400', '500', '700', '900'],
+  variable: '--font-inter',
+  display: 'swap',
+});
+
+const playfair = Playfair_Display({
+  subsets: ['latin'],
+  weight: ['900'],
+  style: ['italic'],
+  variable: '--font-playfair',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: siteConfig.name,
@@ -14,12 +29,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          {children}
-        </ThemeProvider>
-      </body>
+    <html lang="en" className={`${inter.variable} ${playfair.variable}`}>
+      <body>{children}</body>
     </html>
   );
 }

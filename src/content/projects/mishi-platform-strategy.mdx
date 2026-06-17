@@ -1,0 +1,38 @@
+---
+title: "One Platform, Four Very Different Retailers"
+company: "Mishipay"
+role: "Platform Design & Product Strategy"
+startDate: ""
+endDate: ""
+teamSize: "Cross-functional, 4 client portfolios"
+summary: "Defined the platform strategy distinguishing core, configurable, and client-specific layers, letting one system serve a duty-free airport retailer, a sports venue, a premium supermarket, and a US grocery giant simultaneously, without destabilizing what worked for everyone else."
+tags: ["Platform Strategy", "Product Architecture", "Stakeholder Management"]
+metrics:
+  - value: "200K+"
+    label: "Largest catalog (SKUs)"
+  - value: "4"
+    label: "Structurally different clients"
+  - value: "3"
+    label: "Continents"
+  - value: "$3.3M+"
+    label: "Combined revenue impact"
+externalLinks:
+  - label: "View Full Case Study"
+    url: "https://docs.google.com/document/d/1d1hMevTHFCNxG2w-TVYLxDgmALt0VwA7/edit?usp=sharing&ouid=100358671322377485595&rtpof=true&sd=true"
+---
+
+## Problem
+
+The standard answer to serving four structurally different retail environments, a duty-free airport retailer in Dubai, a sports venue in Toronto, a premium supermarket in the UAE, and a US grocery enterprise, is to build four separate products. That doesn't scale: each new client would mean rebuilding from scratch, and engine improvements for one client would never reach the others.
+
+The real challenge was deciding, for every new requirement, where it should live: built once into a stable core that's never customized, built as a configurable capability that any client can activate with their own data, or built as an isolated extension specific to one client's business model or hardware. Getting this wrong in either direction — over-customizing or over-generalizing — accumulates technical debt that compounds with every new client.
+
+## Solution
+
+I evaluated every integration decision across all four clients against a three-tier model. Platform Core covers what every client needs and is never customized: session management, basket engine, payment processing. Configurable Capability covers what multiple clients need but with different data — the engine is built once against a shared database schema, and each client's data loads in via a client-specific ETL script, so the promotions engine that runs Dubai Duty Free's discount days applies the exact same code to Grandiose's mix-and-match rules. Client Extension covers what's genuinely unique to one client's regulation or hardware — DDF's boarding pass scanner for duty-free eligibility, MLSE's RFID bulk-scan and closed-loop "Bucks" currency, Walmart's file-based posting fallback while their API wasn't ready.
+
+The discipline was resisting client pressure to treat every configured capability as a custom build. When a client-specific extension proved useful elsewhere — MLSE's RFID adapter, Grandiose's NI reconciliation tooling, Walmart's multi-jurisdiction tax engine — I promoted it into the configurable or core layer, so each new client's gap became a capability available to every future client at no extra build cost.
+
+## Outcome
+
+The platform now runs Dubai Duty Free's 200,000+ SKU catalog with LAG eligibility rules, MLSE's RFID checkout (78% faster, $1.1M incremental revenue), Grandiose's dual loyalty/non-loyalty promotion forking (Talon One integration delivered in 10 days against a 30-day estimate), and Walmart's multi-jurisdiction US tax model — combining for $3.3M+ in revenue impact across clients on three continents. Capabilities built for one client, RFID for MLSE, the tax engine for Walmart, reconciliation tooling for Grandiose, became standard configurable options for every client that came after.

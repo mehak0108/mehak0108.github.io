@@ -1,0 +1,42 @@
+---
+title: "Saving a $520K UAE Retail Contract — Payment Discrepancy Resolution"
+company: "Mishipay"
+role: "Technical Product Manager"
+startDate: ""
+endDate: ""
+teamSize: "3 organizations"
+summary: "When Mishipay's account owner for a key UAE client resigned without notice, I stepped in to lead a 15-day investigation across three organizations, diagnosing a payment reconciliation bug that was eroding client trust — and turned the crisis into a 5x contract expansion."
+tags: ["Root Cause Analysis", "Stakeholder Management", "Python", "Client Relationship", "Process Improvement"]
+metrics:
+  - value: "$520K"
+    label: "Revenue saved + generated"
+  - value: "15 days"
+    label: "End-to-end resolution"
+  - value: "0%"
+    label: "Discrepancy rate (from ~12%)"
+  - value: "5 → 25"
+    label: "Stores in contract"
+externalLinks:
+  - label: "View Full Case Study"
+    url: "https://docs.google.com/document/d/1tbHt7UbTZ1GIqFJ2xJrFnOqcO1BlpayB/edit?usp=sharing&ouid=100358671322377485595&rtpof=true&sd=true"
+---
+
+## Problem
+
+Grandiose, a premium UAE supermarket chain and one of Mishipay's most strategically important deployments, was processing ~5,000 self-checkout transactions a day across 5 stores through Network International's (NI) payment gateway. A ~12% discrepancy rate meant roughly 600 orders a day were settling successfully with NI but showing as failed in Mishipay's own records — a growing, unexplained gap between what Grandiose's finance team saw and what Mishipay reported.
+
+The account owner who would normally handle this had resigned without notice, leaving the issue ownerless during an active client escalation. Without resolution, Grandiose risked reverting to traditional checkout entirely, and Mishipay risked losing its largest Middle East contract. The investigation was unusually hard because three separate organizations — Mishipay, Network International, and Grandiose IT — each held their own piece of the transaction record, and any one of them could have been the source of the mismatch.
+
+## Solution
+
+I volunteered to own the investigation despite never having traced Mishipay's payment architecture before. Rather than guessing at fixes, I spent the first phase embedding with the payments team to understand the full transaction flow end-to-end, from the checkout kiosk through Mishipay's API to NI's settlement layer — treating that knowledge-gathering as seriously as the technical work itself.
+
+I then built a Python reconciliation script that pulled day-wise transaction records from Mishipay's backend and cross-matched them against NI's settlement files across three checks: count verification, amount matching, and status reconciliation. The analysis revealed a reproducible pattern — NI's API was intermittently returning a non-success status code even when a payment had processed correctly, causing Mishipay to mark fully settled orders as failed.
+
+To manage three organizations through a live crisis, I set up a shared issue tracker visible to all three parties, replaced bilateral calls with a single weekly cross-party sync, and structured client updates around confirmed milestones ("Stores 1 and 2 are now fully reconciled") rather than open-ended timelines — turning 15 days of investigation into a series of visible progress points instead of silence followed by an announcement.
+
+## Outcome
+
+All discrepancies were resolved within 15 days. NI corrected their API to return accurate status codes, and Mishipay added retry logic to re-verify transaction status rather than trusting the first response. The discrepancy rate dropped from ~12% to 0%, and the account moved from an active CPO escalation to a fully expanded engagement — Grandiose grew the contract from 5 to 25 stores, generating $380K in additional annual revenue and retaining $140K in at-risk contract value.
+
+Beyond the immediate fix, I built a daily automated monitoring script to catch future divergence within 24 hours rather than waiting for client reports, authored SOPs for the reconciliation process, and handed off ownership to a junior developer. The reconciliation framework was later adopted as a reference implementation for other high-volume Mishipay clients across the Middle East.

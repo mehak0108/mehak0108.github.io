@@ -1,0 +1,37 @@
+---
+title: "Where National Park Funding Doesn't Match Ecological Risk"
+company: "Foster School of Business, University of Washington"
+role: "Team Lead, Data Analysis & Modeling"
+startDate: "Mar 2026"
+endDate: "May 2026"
+teamSize: "5"
+summary: "Led a 5-person team merging NPS biodiversity, visitation, and funding datasets across 53 national parks into a single Ecological Stress Index, revealing that federal conservation dollars track park popularity far more than ecological need, then translated the findings into three funding-policy recommendations."
+tags: ["Data Analytics", "SQL", "Composite Index Modeling", "Policy Research", "Conservation Finance"]
+metrics:
+  - value: "53"
+    label: "National parks analyzed"
+  - value: "3.3x"
+    label: "More biodiverse purity in low- vs. high-traffic parks"
+  - value: "$495K"
+    label: "Funding gap per at-risk species, best vs. worst-funded park"
+  - value: "7"
+    label: "Parks flagged as highest ecological risk"
+---
+
+## Problem
+
+The National Park Service has to do two things that pull against each other: protect fragile ecosystems and welcome the public into them. Every visitor adds wear — eroded trails, disrupted wildlife, more invasive species hitchhiking in on boots and gear — and federal funding is supposed to scale with that pressure. According to Buxton et al. (2020), U.S. spending on endangered species recovery sits at only 25% of what full implementation actually requires, and that shortfall doesn't land evenly. Some parks absorb far more ecological strain than their budgets can support; others draw outsized funding relative to the conservation burden they actually carry.
+
+We had access to park-level NPS data on species inventory, visitation, acreage, and funding, but no single number that captured which parks were actually under the most ecological stress. Our task: build one, and test whether the current funding model lines up with it.
+
+## Solution
+
+We merged two messy Kaggle datasets (species inventory and visitation) with manually transcribed NPS Budget Book figures, fixing structural issues along the way, comma-separated values that had shifted entire columns, mismatched park names, inconsistent encodings, then calculated park-level metrics like funding per visitor, visitors per acre, and percent non-native species.
+
+Four targeted analyses built toward the final model. First, we found a stark resource-versus-impact mismatch: remote Alaskan parks like Gates of the Arctic get $423.80 in funding per visitor, while Great Smoky Mountains, which holds over 2,100 species, operates on just $1.58. Second, using conditional SQL aggregation across native-vs-non-native species classifications, we confirmed that the top 10% most-visited parks have a native-to-invasive ratio of just 7.32:1, compared to 23.89:1 in the bottom 10% — direct evidence that foot traffic itself accelerates invasive species introduction. Third, a funding-per-at-risk-species analysis showed Great Basin (96 at-risk species) receiving $36,250 per species, while Denali (31 at-risk species, but a $1.9M/year park road) receives $531,613 — funding tracks infrastructure and popularity, not biodiversity threat. Fourth, we built a weighted concern score that separated genuinely endangered species from lower-risk categories and isolated seven parks (Death Valley, Redwood, Channel Islands, Hawaii Volcanoes, Everglades, Haleakala, Biscayne) carrying disproportionate ecological burden tied to pollution, invasive species, or climate exposure.
+
+We then combined all three pressure dimensions, funding imbalance, visitor density, and invasive species ratio, into a single Ecological Stress Index: (Visitor Rank − Funding Rank) + (Visitors Per Acre × 0.25) + (Invasive Species Ratio × 100). Plotting ESI scores against at-risk species counts across all 53 parks showed a clear positive relationship, confirming that ecological vulnerability isn't random; it's driven by the interaction of crowding, funding, and invasive pressure.
+
+## Outcome
+
+The analysis produced a single diagnostic score, the Ecological Stress Index, capable of flagging which parks need conservation intervention most urgently, independent of how popular or well-funded they appear on paper. It surfaced a structural problem: funding rank barely correlates with conservation-need rank across the system. From there we issued three policy recommendations directly tied to the data: reform the federal funding formula to weight biodiversity need alongside infrastructure and visitation, reinstate timed-entry visitor caps at the highest-stress parks (Acadia, Zion, Great Smoky Mountains), and restore ranger and science staffing, which has dropped nearly 25% since January 2025 even as visitation and at-risk species counts climb.

@@ -1,0 +1,33 @@
+---
+title: "Payments Operations Dashboard"
+company: "JP Morgan Chase"
+role: "Product Manager"
+startDate: "Jan 2023"
+endDate: "Jul 2023"
+teamSize: "6"
+summary: "Designed and shipped a real-time ops dashboard that gave the payments team full visibility into transaction health, SLA breaches, and exception queues."
+tags: ["Operations", "Data", "Tooling", "Figma", "Datadog"]
+metrics:
+  - value: "2×"
+    label: "Faster resolution"
+  - value: "60%"
+    label: "Fewer escalations"
+---
+
+## Problem
+
+The payments operations team was flying blind. Exception queues were managed in spreadsheets, SLA breaches were only discovered when customers complained, and there was no single view of transaction health across the stack.
+
+## Solution
+
+I ran discovery across 12 operator interviews, mapped the end-to-end exception workflow, and defined the MVP in collaboration with data engineering and design. The dashboard:
+
+- Showed real-time transaction volume, exception counts, and SLA countdown timers
+- Let operators filter by region, product line, and exception type
+- Sent automated Slack alerts when queues crossed thresholds
+
+Built on Datadog + internal React tooling. Shipped iteratively in 3 sprints.
+
+## Outcome
+
+Mean time to resolution dropped by 2×. Escalations to engineering fell 60% as operators could self-serve context. The team expanded the dashboard to 4 additional product lines six months after launch.

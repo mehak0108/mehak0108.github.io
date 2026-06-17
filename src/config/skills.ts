@@ -1,22 +1,18 @@
-// Edit this file to update your portfolio content
+// Skills — edit this file to update the skills displayed in the About section
 
 import type { SkillCategory } from '@/lib/types';
 
 export const skills: SkillCategory[] = [
   {
-    category: 'Product Management',
-    items: ['Roadmapping', 'User Research', 'Agile / Scrum', 'OKRs', 'A/B Testing', 'Prioritization Frameworks'],
+    category: 'Product & Strategy',
+    items: ['Product Strategy', 'Roadmapping', 'Stakeholder Mgmt', 'JIRA', 'Figma'],
   },
   {
-    category: 'Design',
-    items: ['Figma', 'Wireframing', 'Prototyping', 'Design Systems', 'User Flows'],
+    category: 'Data & ML',
+    items: ['SQL', 'Python', 'Tableau', 'Datadog', 'LLMs', 'Airflow'],
   },
   {
-    category: 'Technical',
-    items: ['SQL', 'Python', 'TypeScript', 'REST APIs', 'Data Analysis'],
-  },
-  {
-    category: 'Tools',
-    items: ['Jira', 'Confluence', 'Notion', 'Mixpanel', 'Amplitude', 'Linear'],
+    category: 'Finance & Ops',
+    items: ['Financial Modeling', 'Retool', 'Kubernetes'],
   },
 ];
