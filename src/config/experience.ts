@@ -39,10 +39,19 @@ export const jobs: Job[] = [
     award: 'Peer to Peer award', // TODO: update with correct award name if different
     description: [
       // TODO: replace with your exact resume bullets
-      'Owned end-to-end delivery of JP Morgan\'s internal service marketplace, unifying service provisioning for 50,000+ engineers, automating quality certification, and establishing the platform\'s first high-availability SLA across multi-cluster Kubernetes infrastructure.',
+      'Instituted JP Morgan\'s first pre-listing compliance gate for marketplace service providers, eliminating undocumented OSB implementations and creating an audit-ready certification trail for 20+ providers, while standardizing cost attribution to recover $3.8M+ annually.'
+      ],
+  },
+    {
+    company: 'Fidelity Investments',
+    role: 'Analyst Intern',
+    startDate: 'May 2019',
+    endDate: 'Jul 2019',
+    location: 'Bangalore, India',
+    description: [
+      "Modernized a legacy patch-management platform supporting Fidelity's global financial services infrastructure, redesigning it for resilience and scalability, eliminating outages caused by isolated component failures, and streamlining future platform upgrades for the Enterprise Infrastructure team.",
     ],
   },
-  // TODO: add additional roles / internships from resume
 ];
 
 export const leadership: LeadershipRole[] = [

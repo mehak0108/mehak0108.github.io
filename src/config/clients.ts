@@ -21,6 +21,11 @@ export const clients: Client[] = [
     width: 100,
   },
   {
+    name: 'Fidelity',
+    src: '/logos/fidelity.png',
+    width: 100,
+  },
+  {
     name: 'Walmart',
     src: '/logos/walmart.png',
     width: 100,

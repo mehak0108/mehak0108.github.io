@@ -8,8 +8,8 @@ export const siteConfig: SiteConfig = {
   title: 'Product Manager',
   tagline: 'Curious builder, systems thinker.',
   bio: [
-    'A product manager and builder passionate about the intersection of technology, operations, and impact. I studied Engineering at IIT Roorkee and am currently pursuing my MBA at ISB Hyderabad, where I focus on product strategy and AI.',
-    "I've led products at JP Morgan across fintech, AI, and data-heavy domains — shipping features used by thousands, cutting processing times dramatically, and building systems that actually last. I love the messy, ambiguous problems where the right framework doesn't exist yet.",
+    'I build things, products, processes, whatever\'s needed, and I\'m usually the one fixing what\'s broken along the way. IIT Roorkee for engineering, JP Morgan and MishiPay for five years of shipping real products, and now Foster School of Business for an MBA in product strategy and AI.',
+    "I've spent that time doing the less glamorous parts of product work, untangling integration problems, managing client priorities that don't agree with each other, getting systems to stop breaking. The common thread is that I like being handed a problem nobody's solved cleanly yet.",
   ],
   email: 'memittal@uw.edu',
   formspreeId: 'mgobrvvr', // Formspree form ID — from formspree.io/f/<id>

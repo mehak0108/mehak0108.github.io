@@ -13,22 +13,23 @@ export const academics: AcademicEntry[] = [
     current: true,
     bullets: [
       // TODO: add clubs, honours, leadership roles at ISB
-      'Co-President: Diversity in Business, VP Entrepreneurship & Venture Capital',
-      'MBA Ambassador',
+      "Fritzky Leadership Fellow, Forte Fellow",
+      'Co-President: Diversity in Business, VP Entrepreneurship & Venture Capital, VP Technology Club, Auction VP: Challenge for charity',
+      'MBA Ambassador, Member: AI Data Analytics Club, Consulting Club'
     ],
   },
   {
     institution: 'Indian Institute of Technology (IIT Roorkee)',
     degree: 'Bachelor of Technology',
     field: 'Major in Chemical Engineering, Minor in Computer Science',
-    location: 'Roorkee, Uttarakhand, India',
+    location: 'Roorkee, India',
     startDate: '2016',
     endDate: '2020',
     current: false,
     bullets: [
       // TODO: add clubs, awards, GPA (optional), president roles
       'MCM Scholar',
-      'Student Mentorship Program',
+      'Student Mentorship Program, Unnat Bharat Abhiyan, National service scheme',
       'Hackathon Winner: Fidelity Investments Codeathon19 - 1st place, LinkedIn - Finalist'
     ],
   },

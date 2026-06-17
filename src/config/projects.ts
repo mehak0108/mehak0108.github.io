@@ -10,21 +10,6 @@ import type { Project } from '@/lib/types';
 
 export const projects: Project[] = [
   {
-  title: 'Zillow + Yelp: A $2.5B Acquisition Proposal',
-  company: 'UW Foster',
-  description: 'Built the full M&A business case for Zillow to acquire Yelp — valuation, synergy modeling, purchase price allocation, and integration roadmap — presented as an acquisition proposal to a simulated Yelp Board of Directors.',
-  tags: ['M&A Strategy', 'Valuation', 'DCF Modeling', 'Financial Analysis'],
-  category: ['finance', 'strategy'],
-  link: 'https://docs.google.com/presentation/d/1MHpCdB2udAhvgSQtLhSJdpQHaG9yEnsO/edit?usp=sharing&rtpof=true&sd=true',
-  type: 'external',
-  featured: false,
-  metrics: [
-    { value: '$2.5B', label: 'Recommended acquisition price' },
-    { value: '$625M+', label: 'Year-1 incremental revenue' },
-    { value: '$630M', label: '3-year synergy NPV' },
-  ],
-  },
-  {
   title: 'From Queue to Checkout in 20 Seconds',
   company: 'Mishipay',
   description: 'Led product discovery and the PRD for RFID self-checkout at Scotiabank Arena, replacing a 90-second barcode checkout that was suppressing game-day merchandise sales with a sub-20-second kiosk flow.',
@@ -58,6 +43,21 @@ export const projects: Project[] = [
   ],
   },
   {
+  title: 'Platform Cost Attribution Initiative',
+  company: 'JP Morgan Chase',
+  description: 'Designed a structured naming standard enforced at the platform gate across private cloud platforms, fixing workload cost attribution and turning a 22-day manual billing reconciliation into a 4-day automated process.',
+  tags: ['Platform Product', 'FinOps', 'Infrastructure', 'Governance'],
+  category: ['product', 'finance', 'strategy'],
+  link: '/projects/jrn-resource-naming',
+  type: 'internal',
+  featured: true,
+  metrics: [
+    { value: '$3.8M', label: 'Charges correctly allocated' },
+    { value: '97%', label: 'Attribution coverage (from 61%)' },
+    { value: '82%', label: 'Faster billing cycle' },
+  ],
+  },
+  {
   title: 'SolWeave: A Blue Ocean Strategy for REI',
   company: 'UW Foster',
   description: 'Designed and pitched a new product category for REI, a solar-integrated rainfly tent cover, using Blue Ocean Strategy tools to find uncontested market space, then built the full go-to-market plan: segmentation, positioning, pricing, and channel strategy.',
@@ -87,6 +87,21 @@ export const projects: Project[] = [
     { value: '4.4M', label: 'Transaction capacity (load-tested)' },
   ],
 },
+{
+  title: 'Zillow + Yelp: A $2.5B Acquisition Proposal',
+  company: 'UW Foster',
+  description: 'Built the full M&A business case for Zillow to acquire Yelp — valuation, synergy modeling, purchase price allocation, and integration roadmap — presented as an acquisition proposal to a simulated Yelp Board of Directors.',
+  tags: ['M&A Strategy', 'Valuation', 'DCF Modeling', 'Financial Analysis'],
+  category: ['finance', 'strategy'],
+  link: 'https://docs.google.com/presentation/d/1MHpCdB2udAhvgSQtLhSJdpQHaG9yEnsO/edit?usp=sharing&rtpof=true&sd=true',
+  type: 'external',
+  featured: false,
+  metrics: [
+    { value: '$2.5B', label: 'Recommended acquisition price' },
+    { value: '$625M+', label: 'Year-1 incremental revenue' },
+    { value: '$630M', label: '3-year synergy NPV' },
+  ],
+  },
   {
   title: 'Cost vs. Conscience: Weighing Strategy Against the Numbers',
   company: 'UW Foster',
@@ -97,21 +112,6 @@ export const projects: Project[] = [
   type: 'external',
   featured: false,
 },
-  {
-  title: 'Platform Cost Attribution Initiative',
-  company: 'JP Morgan Chase',
-  description: 'Designed a structured naming standard enforced at the platform gate across private cloud platforms, fixing workload cost attribution and turning a 22-day manual billing reconciliation into a 4-day automated process.',
-  tags: ['Platform Product', 'FinOps', 'Infrastructure', 'Governance'],
-  category: ['product', 'finance', 'strategy'],
-  link: '/projects/jrn-resource-naming',
-  type: 'internal',
-  featured: true,
-  metrics: [
-    { value: '$3.8M', label: 'Charges correctly allocated' },
-    { value: '97%', label: 'Attribution coverage (from 61%)' },
-    { value: '82%', label: 'Faster billing cycle' },
-  ],
-  },
   {
   title: 'Automated Fault Detection & Alerting',
   company: 'JP Morgan Chase',
