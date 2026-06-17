@@ -63,7 +63,7 @@ export interface Job {
 // ─── Projects ──────────────────────────────────────────────────────────────
 
 export type ProjectType = 'internal' | 'external';
-export type ProjectCategory = 'product' | 'ops' | 'ml' | 'finance' | 'ai';
+export type ProjectCategory = 'product' | 'ops' | 'ml' | 'finance' | 'ai' | 'strategy';
 
 export interface ProjectMetric {
   value: string;
@@ -75,7 +75,7 @@ export interface Project {
   company: string;
   description: string;
   tags: string[];
-  category: ProjectCategory;
+  category: ProjectCategory | ProjectCategory[];
   link: string;
   /** 'internal' → Next.js Link to /projects/[slug]; anything else → <a target="_blank"> */
   type: ProjectType;

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { projects } from '@/config/projects';
 import type { ProjectCategory } from '@/lib/types';
 
@@ -10,6 +10,7 @@ type FilterValue = 'all' | ProjectCategory;
 const FILTERS: { label: string; value: FilterValue }[] = [
   { label: 'All', value: 'all' },
   { label: 'Product / PM', value: 'product' },
+  { label: 'Strategy', value: 'strategy' },
   { label: 'Process & Ops', value: 'ops' },
   { label: 'ML / Data', value: 'ml' },
   { label: 'Finance', value: 'finance' },
@@ -17,51 +18,72 @@ const FILTERS: { label: string; value: FilterValue }[] = [
 
 
 function SmallCard({ project }: { project: typeof projects[0] }) {
-  const inner = (
-    <div
-      style={{ background: '#fff', border: '1px solid var(--color-border)', borderRadius: '12px', padding: '24px', display: 'flex', flexDirection: 'column', height: '100%', cursor: 'pointer', transition: 'transform 300ms, box-shadow 300ms', boxShadow: '0 2px 8px rgba(43,108,176,0.07)' }}
-      onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(43,108,176,0.13)'; }}
-      onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(43,108,176,0.07)'; }}
-    >
-      {/* Company pill */}
-      <div style={{ display: 'inline-block', background: 'var(--color-surface)', borderRadius: '4px', padding: '4px 12px', fontSize: '12px', textTransform: 'uppercase', color: 'var(--color-accent)', letterSpacing: '0.05em', marginBottom: '14px', alignSelf: 'flex-start' }}>
-        {project.company}
-      </div>
+  const router = useRouter();
 
-      <h3 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--color-heading)', marginBottom: '10px' }}>
-        {project.title}
-      </h3>
-      <p style={{ fontSize: '15px', color: 'var(--color-body)', lineHeight: 1.6, marginBottom: '18px', flex: 1 }}>
-        {project.description}
-      </p>
+  const navigate = () => {
+    if (project.type === 'internal') {
+      router.push(project.link);
+    } else {
+      window.open(project.link, '_blank', 'noopener,noreferrer');
+    }
+  };
 
-      {/* Metric */}
-      {project.metrics && project.metrics[0] && (
-        <div style={{ marginBottom: '16px' }}>
-          <span style={{ fontSize: '20px', fontWeight: 900, color: 'var(--color-accent)' }}>{project.metrics[0].value}</span>
-          <span style={{ fontSize: '12px', textTransform: 'uppercase', color: 'var(--color-muted)', marginLeft: '7px', letterSpacing: '0.04em' }}>{project.metrics[0].label}</span>
+  return (
+    <div onClick={navigate} style={{ textDecoration: 'none', display: 'block', cursor: 'pointer' }}>
+      <div
+        style={{ background: '#fff', border: '1px solid var(--color-border)', borderRadius: '12px', padding: '24px', display: 'flex', flexDirection: 'column', height: '100%', transition: 'transform 300ms, box-shadow 300ms', boxShadow: '0 2px 8px rgba(43,108,176,0.07)' }}
+        onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(43,108,176,0.13)'; }}
+        onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(43,108,176,0.07)'; }}
+      >
+        {/* Company pill */}
+        <div style={{ display: 'inline-block', background: 'var(--color-surface)', borderRadius: '4px', padding: '3px 8px', fontSize: '10px', textTransform: 'uppercase', color: 'var(--color-accent)', letterSpacing: '0.05em', marginBottom: '12px', alignSelf: 'flex-start' }}>
+          {project.company}
         </div>
-      )}
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-          {project.tags.slice(0, 2).map(tag => (
-            <span key={tag} style={{ fontSize: '13px', color: 'var(--color-muted)', background: 'var(--color-bg)', borderRadius: '6px', padding: '5px 12px' }}>
-              {tag}
+        <h3 style={{ fontSize: '17px', fontWeight: 700, color: 'var(--color-heading)', marginBottom: '10px' }}>
+          {project.title}
+        </h3>
+        <p style={{ fontSize: '13px', color: 'var(--color-body)', lineHeight: 1.6, marginBottom: '18px', flex: 1 }}>
+          {project.description}
+        </p>
+
+        {/* Metric */}
+        {project.metrics && project.metrics[0] && (
+          <div style={{ marginBottom: '16px' }}>
+            <span style={{ fontSize: '20px', fontWeight: 900, color: '#C0622D' }}>{project.metrics[0].value}</span>
+            <span style={{ fontSize: '12px', textTransform: 'uppercase', color: 'var(--color-muted)', marginLeft: '7px', letterSpacing: '0.04em' }}>{project.metrics[0].label}</span>
+          </div>
+        )}
+
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
+            {project.tags.slice(0, 2).map(tag => (
+              <span key={tag} style={{ fontSize: '11px', color: 'var(--color-muted)', background: 'var(--color-bg)', borderRadius: '6px', padding: '4px 10px' }}>
+                {tag}
+              </span>
+            ))}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
+            {project.externalLinks?.map(link => (
+              <a
+                key={link.url}
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={e => e.stopPropagation()}
+                style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-accent)', textDecoration: 'none', border: '1px solid var(--color-accent)', borderRadius: '6px', padding: '4px 10px', whiteSpace: 'nowrap' }}
+              >
+                {link.label} ↗
+              </a>
+            ))}
+            <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-accent)', whiteSpace: 'nowrap' }}>
+              {project.type === 'external' ? 'View ↗' : 'View →'}
             </span>
-          ))}
+          </div>
         </div>
-        <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-accent)', whiteSpace: 'nowrap' }}>
-          {project.type === 'external' ? 'View ↗' : 'View →'}
-        </span>
       </div>
     </div>
   );
-
-  if (project.type === 'internal') {
-    return <Link href={project.link} style={{ textDecoration: 'none', display: 'block' }}>{inner}</Link>;
-  }
-  return <a href={project.link} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', display: 'block' }}>{inner}</a>;
 }
 
 const PAGE_SIZE = 6;
@@ -70,8 +92,11 @@ export function Projects() {
   const [activeFilter, setActiveFilter] = useState<FilterValue>('all');
   const [showAll, setShowAll] = useState(false);
 
-  const nonAI = projects.filter(p => p.category !== 'ai');
-  const filtered = activeFilter === 'all' ? nonAI : nonAI.filter(p => p.category === activeFilter);
+  const hasCategory = (p: typeof projects[0], cat: ProjectCategory) =>
+    Array.isArray(p.category) ? p.category.includes(cat) : p.category === cat;
+
+  const nonAI = projects.filter(p => !hasCategory(p, 'ai'));
+  const filtered = activeFilter === 'all' ? nonAI : nonAI.filter(p => hasCategory(p, activeFilter as ProjectCategory));
   const visible = showAll ? filtered : filtered.slice(0, PAGE_SIZE);
   const hasMore = filtered.length > PAGE_SIZE && !showAll;
 

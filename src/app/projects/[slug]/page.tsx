@@ -210,8 +210,8 @@ export default async function CaseStudyPage({
               <div style={{ width: '40px', flexShrink: 0 }} />
             </div>
             {/* Screenshot */}
-            <div style={{ background: '#fff', padding: '24px', display: 'flex', justifyContent: 'center' }}>
-              <img src={fm.coverImage} alt={fm.title} style={{ width: '100%', maxHeight: '480px', objectFit: 'contain' }} />
+            <div style={{ background: '#fff' }}>
+              <img src={fm.coverImage} alt={fm.title} style={{ width: '100%', display: 'block' }} />
             </div>
           </div>
         )}

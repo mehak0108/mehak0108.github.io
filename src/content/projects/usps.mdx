@@ -1,0 +1,35 @@
+---
+title: "Cutting Post Office Wait Times by 65% — No New Hires"
+company: "Foster School of Business, University of Washington"
+role: "Team Lead, Process Simulation"
+startDate: "Apr 2026"
+endDate: "May 2026"
+teamSize: "5"
+summary: "Led a 5-person team through an on-site observation of a USPS retail lobby, built a discrete-event process simulation from measured arrival and service-time data, and identified a zero-headcount fix that cuts average wait time by 65%."
+tags: ["Process Simulation", "Queueing Theory", "Operations Research", "Site Observation", "Capacity Planning"]
+metrics:
+  - value: "65%"
+    label: "Reduction in average wait time"
+  - value: "0"
+    label: "Additional headcount required"
+  - value: "96.5% → 84.5%"
+    label: "Counter utilization after rerouting"
+  - value: "9 pts"
+    label: "Self-service routing shift (11% → 20%)"
+---
+
+## Problem
+
+A USPS retail location was visibly congested at peak hours, but nobody could say exactly why, or what to do about it, without data. We ran a live site visit and timed every stage of the customer journey: inter-arrival times, processing times at staff counters versus self-service kiosks, queue lengths, and throughput. The numbers confirmed what the lobby felt like: counter service was running at 96.5% utilization with only 2–3 employees, average wait time sat at 4 minutes 4 seconds, and the queue regularly held over 6 customers. Eighty percent of all arrivals were funneling into the constrained counter line even though self-service kiosks sat underused at just 10–11% of volume.
+
+The question wasn't whether there was a bottleneck, it was visible, it was whether fixing it required adding headcount, or whether the existing capacity in the self-service kiosks was simply being routed around.
+
+## Solution
+
+We built a process simulator calibrated to the observed data (95 customers/hour arrival rate, staff-counter processing time of 2:17, self-service processing time of 4:14) to test interventions before recommending any of them. The root-cause analysis pointed to a behavioral problem, not a structural one: customers were confused about which transactions qualified for self-service, where to affix labels, and whether the kiosks could handle their needs, so eligible customers defaulted to the counter line by habit rather than necessity.
+
+We modeled four scenarios against the baseline. Simply adding a self-service station barely moved the needle (wait time dropped from 4:04 to 3:38). Adding a fourth counter worked dramatically (wait time fell to 14 seconds) but came with a permanent labor cost. The scenario that mattered: increasing self-service routing from 11% to 20%, a 9-percentage-point shift achievable purely through signage and a better kiosk experience, cut average wait time to 1 minute 24 seconds and utilization to 84.5%, with zero additional headcount.
+
+## Outcome
+
+We recommended redirecting eligible customers to self-service through clear entrance signage and an improved kiosk experience (stocked supplies, simpler instructions, reliable uptime), rather than adding a fourth counter. The simulation showed this single behavioral fix delivers a 65% reduction in average wait time using capacity that already exists. Next steps handed to the location: install signage, track self-service utilization before/after, and if routing reaches the modeled 20%, formalize kiosk supply protocols as standard operating procedure.

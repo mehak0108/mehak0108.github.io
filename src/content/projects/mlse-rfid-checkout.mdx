@@ -1,0 +1,40 @@
+---
+title: "From Queue to Checkout in 20 Seconds — RFID Self-Checkout at MLSE"
+company: "Mishipay"
+role: "Product Discovery & PRD"
+startDate: ""
+endDate: ""
+teamSize: "Cross-functional, MLSE × Mishipay"
+summary: "Led product discovery and the PRD for RFID self-checkout at MLSE's Real Sports Apparel stores in Scotiabank Arena, turning a 90-second barcode checkout bottleneck into a sub-20-second kiosk flow that generated $1.1M in incremental annual revenue."
+tags: ["Product Discovery", "PRD", "Pilot Management", "Retail Tech", "Solution Evaluation"]
+metrics:
+  - value: "78%"
+    label: "Faster checkout"
+  - value: "$1.1M"
+    label: "Incremental revenue"
+  - value: "+55%"
+    label: "YoY retail revenue growth"
+  - value: "82"
+    label: "Home events per season"
+externalLinks:
+  - label: "View Full Case Study"
+    url: "https://docs.google.com/document/d/1zhCkUhGy-iHS6NogFTTqWMc7HX3cBDf5/edit?usp=sharing&ouid=100358671322377485595&rtpof=true&sd=true"
+---
+
+## Problem
+
+At Scotiabank Arena's Real Sports Apparel stores, fans faced ~90-second checkout times plus 5–10 minute queues during the two 15-minute intermissions per game — the only realistic windows to shop. With 3 checkout points and 90-second transactions, maximum throughput was capped at ~30 customers per intermission, regardless of attendance or demand.
+
+The investigation started from a qualitative signal: MLSE's Customer Success team had observed fans turning away when queues became visible from the store entrance. Mishipay's session logs confirmed a hard throughput ceiling that didn't budge even on sellout nights — but logs alone couldn't prove lost sales, since fans who saw the queue and walked away never generated a session. I triangulated frustration evidence from three external sources: revenue-per-attendee benchmarks against NRF sports venue norms, session timing distribution showing a sharp early-intermission spike and drop-off (consistent with a visible queue deterring later arrivals), and direct staff observation.
+
+## Solution
+
+I evaluated four options against checkout speed, implementation complexity, and operational cost: continuing with barcode self-checkout, mobile app checkout, additional staffed express lanes, and RFID kiosks. The first three all preserved the fan's core trade-off — "is this worth missing the game for?" RFID was the only option that eliminated the trade-off entirely: a fan places items in a zone, pays, and is back in their seat, with no queue and no decision to make.
+
+A key de-risking insight: sports merchandise is already RFID-tagged by brands for inventory and loss prevention, so the kiosk only needed to read existing tags and integrate with MLSE's POS — no new tagging infrastructure required. I scoped the MVP to include contactless/chip/mobile wallet payment, custom jersey checkout in the same flow (high-value, high-intent purchases that couldn't be excluded without undermining the business case), and a staff-assist mode for the ~1% of non-RFID-tagged edge cases, while deferring mobile app checkout, loyalty integration, and multi-language support.
+
+The revenue model was built bottom-up and deliberately conservative: reducing transaction time from 90 to 20 seconds raises throughput per intermission from 30 to 135 transactions — a 4.5× increase — multiplied across 82 home events and an average $65 game-day basket value, projecting ~$1.12M in incremental annual revenue.
+
+## Outcome
+
+The February 2024 pilot hit every pre-agreed success criterion: average transaction time fell to under 20 seconds (a 78% reduction), the visible queue disappeared entirely, and staff intervention dropped to under 5% of transactions. Actual incremental revenue came in at $1.1M, closely validating the model, with retail revenue growing 55% year-over-year. MLSE's confidence in the result was strong enough that RFID kiosks became the sole checkout solution at Real Sports Apparel, fully replacing manned tills — a stronger commercial signal than the revenue numbers alone.

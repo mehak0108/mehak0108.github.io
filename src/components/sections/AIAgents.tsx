@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { projects } from '@/config/projects';
 
-const aiProjects = projects.filter(p => p.category === 'ai');
+const aiProjects = projects.filter(p => Array.isArray(p.category) ? p.category.includes('ai') : p.category === 'ai');
 
 function SparklesIcon() {
   return (
@@ -23,11 +23,11 @@ function AICard({ project }: { project: typeof projects[0] }) {
       onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
     >
       {/* Company pill */}
-      <div style={{ display: 'inline-block', background: 'rgba(255,255,255,0.07)', borderRadius: '4px', padding: '4px 12px', fontSize: '12px', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', letterSpacing: '0.05em', marginBottom: '16px', alignSelf: 'flex-start' }}>
+      <div style={{ display: 'inline-block', background: 'rgba(255,255,255,0.07)', borderRadius: '4px', padding: '3px 8px', fontSize: '10px', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', letterSpacing: '0.05em', marginBottom: '16px', alignSelf: 'flex-start' }}>
         {project.company}
       </div>
 
-      <h3 style={{ fontSize: '22px', fontWeight: 700, color: '#fff', marginBottom: '10px', lineHeight: 1.2 }}>
+      <h3 style={{ fontSize: '17px', fontWeight: 700, color: '#fff', marginBottom: '10px', lineHeight: 1.2 }}>
         {project.title}
       </h3>
       <p style={{ fontSize: '15px', color: 'rgba(255,255,255,0.6)', lineHeight: 1.65, marginBottom: '20px', flex: 1 }}>
@@ -39,7 +39,7 @@ function AICard({ project }: { project: typeof projects[0] }) {
         <div style={{ display: 'flex', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: '10px', overflow: 'hidden', marginBottom: '20px' }}>
           {project.metrics.map((m, i) => (
             <div key={i} style={{ flex: 1, padding: '12px 16px', borderRight: i < project.metrics!.length - 1 ? '0.5px solid rgba(255,255,255,0.1)' : 'none', textAlign: 'center' }}>
-              <p style={{ fontSize: '22px', fontWeight: 900, color: '#fff', lineHeight: 1 }}>{m.value}</p>
+              <p style={{ fontSize: '18px', fontWeight: 900, color: '#fff', lineHeight: 1 }}>{m.value}</p>
               <p style={{ fontSize: '11px', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', letterSpacing: '0.05em', marginTop: '4px' }}>{m.label}</p>
             </div>
           ))}
@@ -49,7 +49,7 @@ function AICard({ project }: { project: typeof projects[0] }) {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
           {project.tags.slice(0, 2).map(tag => (
-            <span key={tag} style={{ fontSize: '13px', color: 'rgba(255,255,255,0.35)', background: 'rgba(255,255,255,0.05)', borderRadius: '6px', padding: '4px 10px' }}>
+            <span key={tag} style={{ fontSize: '11px', color: 'rgba(255,255,255,0.35)', background: 'rgba(255,255,255,0.05)', borderRadius: '6px', padding: '4px 10px' }}>
               {tag}
             </span>
           ))}
