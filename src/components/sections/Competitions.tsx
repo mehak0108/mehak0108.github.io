@@ -77,10 +77,7 @@ function CompCard({ comp }: { comp: typeof competitions[0] }) {
       </div>
 
       {/* Title — prominent */}
-      <p style={{ fontSize: '18px', fontWeight: 700, color: 'var(--color-heading)', lineHeight: 1.3, marginBottom: '8px' }}>{comp.title}</p>
-
-      {/* Type label */}
-      <p style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--color-muted)', letterSpacing: '0.07em', marginBottom: 'auto' }}>{comp.type}</p>
+      <p style={{ fontSize: '18px', fontWeight: 700, color: 'var(--color-heading)', lineHeight: 1.3, marginBottom: 'auto' }}>{comp.title}</p>
 
       {/* Org + year bottom row */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '16px' }}>
