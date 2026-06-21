@@ -10,6 +10,20 @@ import type { Project } from '@/lib/types';
 
 export const projects: Project[] = [
   {
+  title: 'Built in a Weekend: A private AI Chatbot Over a Startup\'s Document Library',
+  company: 'startup',
+  description: 'Self-hosted a RAG pipeline on n8n and Pinecone during a commercialization fellowship, turning a biotech startup\'s scattered clinical, funding, and product documents into a chatbot that answers in seconds without sending proprietary data to a third-party LLM.',
+  tags: ['RAG', 'n8n', 'AI Agents', 'Vector Search'],
+  category: 'ai',
+  link: 'https://mehakmittal1.substack.com/p/how-i-rag-ged-my-way-through-a-fellowship',
+  type: 'external',
+  featured: false,
+  metrics: [
+    { value: '<5 sec', label: 'Answer time vs. manual file search' },
+    { value: '1 weekend', label: 'Build time' },
+  ],
+},
+  {
   title: 'From Queue to Checkout in 20 Seconds',
   company: 'Mishipay',
   description: 'Led product discovery and the PRD for RFID self-checkout at Scotiabank Arena, replacing a 90-second barcode checkout that was suppressing game-day merchandise sales with a sub-20-second kiosk flow.',

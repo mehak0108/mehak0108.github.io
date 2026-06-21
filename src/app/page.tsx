@@ -6,7 +6,6 @@ import { AIAgents } from '@/components/sections/AIAgents';
 import { Projects } from '@/components/sections/Projects';
 import { Competitions } from '@/components/sections/Competitions';
 import { Life } from '@/components/sections/Life';
-import { Contact } from '@/components/sections/Contact';
 import { Footer } from '@/components/ui/Footer';
 
 export default function Home() {
@@ -21,7 +20,6 @@ export default function Home() {
         <Projects />
         <Competitions />
         <Life />
-        <Contact />
       </main>
       <Footer />
     </>

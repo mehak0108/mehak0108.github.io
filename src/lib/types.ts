@@ -6,6 +6,7 @@ export interface SocialLinks {
   twitter?: string;
   instagram?: string;
   website?: string;
+  substack?: string;
   [key: string]: string | undefined;
 }
 
@@ -22,7 +23,6 @@ export interface SiteConfig {
   tagline: string;
   bio: string[];           // array of paragraphs
   email: string;
-  formspreeId: string;
   location: string;
   currentStatus: string;  // e.g. "MBA · ISB Hyderabad"
   openTo: string;         // e.g. "PM roles · Summer 2026"

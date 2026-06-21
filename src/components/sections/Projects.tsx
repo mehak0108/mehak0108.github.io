@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { projects } from '@/config/projects';
 import type { ProjectCategory } from '@/lib/types';
@@ -86,19 +86,42 @@ function SmallCard({ project }: { project: typeof projects[0] }) {
   );
 }
 
-const PAGE_SIZE = 6;
+// Matches the grid's `repeat(auto-fill, minmax(MIN_CARD_WIDTH, 1fr))` track sizing
+const MIN_CARD_WIDTH = 280;
+const GRID_GAP = 12;
+const ROWS_BEFORE_COLLAPSE = 2;
 
 export function Projects() {
   const [activeFilter, setActiveFilter] = useState<FilterValue>('all');
   const [showAll, setShowAll] = useState(false);
+  const [columns, setColumns] = useState(1);
+  const gridRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const grid = gridRef.current;
+    if (!grid) return;
+
+    const updateColumns = () => {
+      const width = grid.offsetWidth;
+      const count = Math.max(1, Math.floor((width + GRID_GAP) / (MIN_CARD_WIDTH + GRID_GAP)));
+      setColumns(count);
+    };
+
+    updateColumns();
+    const observer = new ResizeObserver(updateColumns);
+    observer.observe(grid);
+    return () => observer.disconnect();
+  }, []);
+
+  const pageSize = columns * ROWS_BEFORE_COLLAPSE;
 
   const hasCategory = (p: typeof projects[0], cat: ProjectCategory) =>
     Array.isArray(p.category) ? p.category.includes(cat) : p.category === cat;
 
   const nonAI = projects.filter(p => !hasCategory(p, 'ai'));
   const filtered = activeFilter === 'all' ? nonAI : nonAI.filter(p => hasCategory(p, activeFilter as ProjectCategory));
-  const visible = showAll ? filtered : filtered.slice(0, PAGE_SIZE);
-  const hasMore = filtered.length > PAGE_SIZE && !showAll;
+  const visible = showAll ? filtered : filtered.slice(0, pageSize);
+  const hasMore = filtered.length > pageSize && !showAll;
 
   // Reset "show more" when filter changes
   const handleFilter = (val: FilterValue) => {
@@ -147,7 +170,7 @@ export function Projects() {
         </div>
 
         {/* Cards grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '12px' }}>
+        <div ref={gridRef} style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fill, minmax(${MIN_CARD_WIDTH}px, 1fr))`, gap: `${GRID_GAP}px` }}>
           {visible.map((p, i) => <SmallCard key={i} project={p} />)}
         </div>
 
@@ -164,7 +187,7 @@ export function Projects() {
               onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--color-accent)'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(43,108,176,0.12)'; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--color-border)'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(43,108,176,0.07)'; }}
             >
-              Show {filtered.length - PAGE_SIZE} more projects
+              Show {filtered.length - pageSize} more projects
             </button>
           </div>
         )}
