@@ -13,7 +13,6 @@ export const siteConfig: SiteConfig = {
     'Most recently, I built an AI automation pipeline for a biotech startup using n8n, RAG, and vector search, turning a collection of proprietary documents into an instantly queryable internal knowledge base.'
   ],
   email: 'memittal@uw.edu',
-  formspreeId: 'mgobrvvr', // Formspree form ID — from formspree.io/f/<id>
   location: 'Seattle, WA',
   currentStatus: 'MBA · UW Foster',
   openTo: 'PM roles · Spring / Summer 2027',
