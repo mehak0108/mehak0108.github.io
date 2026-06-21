@@ -12,6 +12,16 @@ function LinkedInIcon() {
   );
 }
 
+function SubstackIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M22 5.5H2V7.5H22V5.5Z"/>
+      <path d="M22 10.5H2V12.5H22V10.5Z"/>
+      <path d="M2 15.5H22V24L12 18.5L2 24V15.5Z"/>
+    </svg>
+  );
+}
+
 function scrollToSection(id: string) {
   const el = document.getElementById(id);
   if (el) {
@@ -21,22 +31,14 @@ function scrollToSection(id: string) {
 }
 
 export function About() {
-  const whatIDo = siteConfig.whatIDo;
-
   return (
     <section id="about" style={{ padding: '48px 120px 64px' }}>
-      <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 380px', gap: '64px', alignItems: 'start' }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 320px', gap: '64px', alignItems: 'start' }}>
 
         {/* ── Left column ── */}
         <div>
-          {/* Badge pill */}
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'var(--color-heading)', color: '#fff', fontSize: '11px', fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', borderRadius: '50px', padding: '6px 16px', marginBottom: '28px' }}>
-            <span style={{ fontSize: '10px', opacity: 0.7 }}>✦</span>
-            {siteConfig.title} · {siteConfig.currentStatus}
-          </div>
-
           {/* Name */}
-          <h1 style={{ fontFamily: 'var(--font-inter), Inter, sans-serif', fontWeight: 800, fontSize: 'clamp(42px, 6vw, 72px)', letterSpacing: '-0.03em', color: 'var(--color-heading)', lineHeight: 1.05, marginBottom: '10px' }}>
+          <h1 style={{ fontFamily: 'var(--font-inter), Inter, sans-serif', fontWeight: 800, fontSize: 'clamp(36px, 5vw, 58px)', letterSpacing: '-0.03em', color: 'var(--color-heading)', lineHeight: 1.05, marginBottom: '10px' }}>
             {siteConfig.name}
           </h1>
 
@@ -92,13 +94,26 @@ export function About() {
                 <LinkedInIcon /> LinkedIn
               </a>
             )}
+
+            {siteConfig.socials.substack && (
+              <a
+                href={siteConfig.socials.substack}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '15px', fontWeight: 500, color: 'var(--color-body)', background: 'transparent', borderRadius: '50px', padding: '11px 24px', border: '1.5px solid var(--color-border)', textDecoration: 'none', transition: 'border-color 300ms, color 300ms' }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--color-accent)'; e.currentTarget.style.color = 'var(--color-accent)'; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--color-border)'; e.currentTarget.style.color = 'var(--color-body)'; }}
+              >
+                <SubstackIcon /> Substack
+              </a>
+            )}
           </div>
         </div>
 
         {/* ── Right column ── */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px', marginTop: '40px' }}>
           {/* Circular photo */}
-          <div style={{ width: '280px', height: '280px', borderRadius: '50%', overflow: 'hidden', background: 'linear-gradient(160deg, #B8D4EC, #7AAED4)', border: '4px solid #fff', boxShadow: '0 0 0 1px var(--color-border)', flexShrink: 0 }}>
+          <div style={{ width: '320px', height: '320px', borderRadius: '50%', overflow: 'hidden', background: 'linear-gradient(160deg, #B8D4EC, #7AAED4)', border: '4px solid #fff', boxShadow: '0 0 0 1px var(--color-border)', flexShrink: 0 }}>
             <img
               src="/images/mehak.jpg"
               alt={siteConfig.name}
@@ -107,22 +122,11 @@ export function About() {
             />
           </div>
 
-          {/* What I do card */}
-          {whatIDo.length > 0 && (
-            <div style={{ width: '100%', background: '#fff', border: '1px solid var(--color-border)', borderRadius: '16px', padding: '20px 22px' }}>
-              <p style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--color-accent)', marginBottom: '16px' }}>
-                What I do
-              </p>
-              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {whatIDo.map((item, i) => (
-                  <li key={i} style={{ display: 'flex', gap: '12px', fontSize: '14px', color: 'var(--color-body)', lineHeight: 1.5, alignItems: 'flex-start' }}>
-                    <span style={{ fontSize: '20px', flexShrink: 0, lineHeight: 1.3 }}>{item.emoji}</span>
-                    <span>{item.text}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          {/* Badge pill */}
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'var(--color-heading)', color: '#fff', fontSize: '11px', fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', borderRadius: '50px', padding: '6px 16px' }}>
+            <span style={{ fontSize: '10px', opacity: 0.7 }}>✦</span>
+            {siteConfig.title} · {siteConfig.currentStatus}
+          </div>
         </div>
 
       </div>

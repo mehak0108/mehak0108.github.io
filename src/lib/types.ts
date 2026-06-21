@@ -6,6 +6,7 @@ export interface SocialLinks {
   twitter?: string;
   instagram?: string;
   website?: string;
+  substack?: string;
   [key: string]: string | undefined;
 }
 
