@@ -16,27 +16,122 @@ metrics:
     label: "Discrepancy rate (from ~12%)"
   - value: "5 → 25"
     label: "Stores in contract"
-externalLinks:
-  - label: "View Full Case Study"
-    url: "https://docs.google.com/document/d/1tbHt7UbTZ1GIqFJ2xJrFnOqcO1BlpayB/edit?usp=sharing&ouid=100358671322377485595&rtpof=true&sd=true"
 ---
 
-## Problem
+## Executive Summary
 
-Grandiose, a premium UAE supermarket chain and one of Mishipay's most strategically important deployments, was processing ~5,000 self-checkout transactions a day across 5 stores through Network International's (NI) payment gateway. A ~12% discrepancy rate meant roughly 600 orders a day were settling successfully with NI but showing as failed in Mishipay's own records — a growing, unexplained gap between what Grandiose's finance team saw and what Mishipay reported.
+When Mishipay's account POC for Grandiose UAE resigned without notice, transaction discrepancies across 5 stores were left without an owner, threatening a key Middle East contract. I stepped in voluntarily, leading a structured 15-day investigation across three organizations, two technical systems, and a high-stakes client relationship under active escalation.
 
-The account owner who would normally handle this had resigned without notice, leaving the issue ownerless during an active client escalation. Without resolution, Grandiose risked reverting to traditional checkout entirely, and Mishipay risked losing its largest Middle East contract. The investigation was unusually hard because three separate organizations — Mishipay, Network International, and Grandiose IT — each held their own piece of the transaction record, and any one of them could have been the source of the mismatch.
+Across the 5 stores, Grandiose was processing approximately 5,000 transactions per day through Network International's payment gateway. A ~12% discrepancy rate meant roughly 600 orders every day were being marked as failed on Mishipay's side despite being successfully settled by NI, creating a growing gap between what Grandiose's finance team saw and what Mishipay's platform reported.
 
-## Solution
+Transaction mismatches between order records in Mishipay's platform and settlement data held by NI (the third-party payment gateway) were eroding Grandiose's confidence in the self-checkout deployment. Without resolution, the client risked reverting to traditional checkout and Mishipay risked losing its largest UAE contract.
 
-I volunteered to own the investigation despite never having traced Mishipay's payment architecture before. Rather than guessing at fixes, I spent the first phase embedding with the payments team to understand the full transaction flow end-to-end, from the checkout kiosk through Mishipay's API to NI's settlement layer — treating that knowledge-gathering as seriously as the technical work itself.
+By designing a rigorous Python-based data reconciliation approach, coordinating root cause analysis across three stakeholder groups, and communicating proactively with the client throughout, all discrepancies were resolved within 15 days. The outcome exceeded expectations: Grandiose expanded the engagement from 5 to 25 stores, generating $380K in additional annual revenue and preventing $140K in contract losses.
 
-I then built a Python reconciliation script that pulled day-wise transaction records from Mishipay's backend and cross-matched them against NI's settlement files across three checks: count verification, amount matching, and status reconciliation. The analysis revealed a reproducible pattern — NI's API was intermittently returning a non-success status code even when a payment had processed correctly, causing Mishipay to mark fully settled orders as failed.
+## Background & Context
 
-To manage three organizations through a live crisis, I set up a shared issue tracker visible to all three parties, replaced bilateral calls with a single weekly cross-party sync, and structured client updates around confirmed milestones ("Stores 1 and 2 are now fully reconciled") rather than open-ended timelines — turning 15 days of investigation into a series of visible progress points instead of silence followed by an announcement.
+### Mishipay
 
-## Outcome
+Mishipay provides AI-powered self-checkout solutions enabling shoppers to scan, pay, and leave without queuing. Operating across the US, UK, Canada and Middle East, Mishipay integrates with existing retail infrastructure, POS systems, payment gateways, and inventory management, to deliver frictionless checkout at scale. Grandiose UAE was one of Mishipay's most strategically important deployments in the region.
 
-All discrepancies were resolved within 15 days. NI corrected their API to return accurate status codes, and Mishipay added retry logic to re-verify transaction status rather than trusting the first response. The discrepancy rate dropped from ~12% to 0%, and the account moved from an active CPO escalation to a fully expanded engagement — Grandiose grew the contract from 5 to 25 stores, generating $380K in additional annual revenue and retaining $140K in at-risk contract value.
+### Grandiose — UAE Premium Supermarket Chain
 
-Beyond the immediate fix, I built a daily automated monitoring script to catch future divergence within 24 hours rather than waiting for client reports, authored SOPs for the reconciliation process, and handed off ownership to a junior developer. The reconciliation framework was later adopted as a reference implementation for other high-volume Mishipay clients across the Middle East.
+Grandiose is a premium supermarket chain operating high-footfall stores across the UAE, with locations in residential and commercial hubs including Sports City and Binghatti Rose. At approximately 1,000 transactions per store per day, the 5-store Mishipay deployment processed around 5,000 daily transactions through Network International (NI), a leading payment technology provider in the Middle East that handled card authorization, settlement, and financial reporting on Grandiose's behalf.
+
+## The Challenge
+
+Unlike a single-system bug, this investigation involved three distinct data owners, each maintaining its own transaction records, and each capable of being the source of discrepancy. Resolving the issue required simultaneous access, alignment, and trust from all three parties at a moment when client confidence was already fragile:
+
+- **Mishipay:** Transaction initiation, basket composition, split-tender processing, and order records
+- **Network International (NI – payment provider):** Card authorization, settlement processing, and financial reporting to Grandiose
+- **Grandiose IT:** End-of-day reconciliation, internal financial systems, and daily settlement sign-off
+
+The risk of misattributing root cause to the wrong party, or shipping a premature fix, could have extended the timeline and further damaged all three relationships. A structured investigation was essential.
+
+## System Architecture Overview
+
+The diagram below maps the full transaction data flow between all three systems and highlights the discrepancy zone where mismatches were detected:
+
+<figure>
+  <img src="/images/projects/grandiose-system-architecture.png" alt="Transaction data flow between Mishipay, Grandiose, and Network International, highlighting the discrepancy zone where NI's API returned the wrong status code to Mishipay" />
+  <figcaption>The discrepancy zone: NI processed payments correctly, but Mishipay received a non-success status, marking orders as incomplete</figcaption>
+</figure>
+
+## Investigation Process
+
+The investigation was structured into five sequential phases, each with clearly defined outputs before advancing. This phased structure, combined with milestone-based client updates at each stage, maintained trust through a 15-day process without creating the perception of silence or stagnation. The flowchart below documents the full end-to-end methodology:
+
+<figure>
+  <img src="/images/projects/grandiose-investigation-process.png" alt="15-day investigation process across five phases: crisis identification, intake and stakeholder mapping, data investigation, root cause analysis and fix, and resolution and scale prevention" />
+  <figcaption>Five phases, Day 0 to Day 15: crisis identification through resolution and scale prevention</figcaption>
+</figure>
+
+## Technical Approach & Key Decisions
+
+### Mapping Unfamiliar Territory First
+
+This investigation required ramping up on a domain I had not previously worked in, Mishipay's internal payment architecture. Before writing any reconciliation scripts or forming hypotheses, I engaged the payments team directly to understand how a transaction moved through the system end-to-end: from the SCO kiosk through the Mishipay API, into the transaction database, and across to Network International's settlement layer. This was my first time tracing a full payment transaction flow, and I treated the knowledge-gathering phase as seriously as the technical investigation itself. Understanding the system accurately before analyzing it was what made the root cause identifiable at all.
+
+### Data Reconciliation with Python
+
+The investigation's analytical backbone was a Python reconciliation script that fetched day-wise transaction records from Mishipay's backend API and cross-matched them against Network International's settlement files. The script automated three core checks:
+
+- **Count verification:** Orders initiated on Mishipay vs. orders settled by NI, per store per day
+- **Amount matching:** Transaction totals before and after Network International processing to surface value gaps
+- **Status reconciliation:** Identification of orphaned transactions — recorded as failed on Mishipay but present and settled in NI's ledger
+
+The analysis revealed a consistent, reproducible pattern: payments that Network International had fully processed and settled were not being reflected as successful in Mishipay's order records. The root cause was a status code issue, NI's API was intermittently returning a non-success status code to Mishipay even when the underlying payment had processed correctly. Mishipay's system, reading the incorrect status, would mark the order as incomplete, creating a phantom discrepancy between what Network International had settled and what Mishipay had recorded. The fix required updates on both sides: Network International corrected their API to return accurate status codes on successful transactions, and Mishipay implemented retry and reconciliation logic to re-poll NI's API and verify the true transaction status rather than trusting the initial response.
+
+### Multi-Party Stakeholder Coordination
+
+Managing three organizations simultaneously during a live client investigation required deliberate communication design. A shared issue tracker mapped each discrepancy type to its owning team, proposed fix, and status, visible to Grandiose IT, Network International, and Mishipay's backend team. A single weekly cross-party sync replaced separate bilateral calls, reducing coordination overhead and ensuring that no one party could shift accountability without group visibility. Client updates to Grandiose were structured around confirmed milestones ("Stores 1 and 2 are now fully reconciled") rather than open-ended timelines, this rebuilt trust incrementally rather than asking for patience until a complete resolution.
+
+### Key Decision: Communicate Early or Wait for Full Resolution
+
+A core judgment call was whether to share partial findings with the client as they emerged, or wait for a complete picture. Sharing preliminary data too early risked creating confusion if findings changed; waiting 15 days would signal disengagement during a period of active client anxiety. The middle path chosen, sharing confirmed findings store-by-store as each was validated, preserved credibility and gave the client visible evidence of progress. This turned a 15-day investigation into a series of milestone moments.
+
+### Process Improvement: Reactive to Proactive
+
+Beyond resolving the immediate issue, the reconciliation process was designed for ongoing use. A daily monitoring script was automated to alert on settlement count divergence above a defined threshold, shifting from client-reported detection to proactive identification within 24 hours. SOPs were authored covering reconciliation steps, failure modes, and escalation paths, then handed off via a structured knowledge transfer session to a junior developer who assumed ongoing ownership.
+
+## Results: Before & After
+
+<table>
+<thead>
+<tr><th>Metric</th><th>Before</th><th>After / Outcome</th></tr>
+</thead>
+<tbody>
+<tr><td>Transaction discrepancy rate</td><td>~12% of daily orders (~600/day)</td><td>0% — NI status codes corrected; all reconciled</td></tr>
+<tr><td>Daily transaction volume</td><td>~5,000/day (5 stores × ~1,000)</td><td>Fully monitored via automated daily reconciliation</td></tr>
+<tr><td>Stores fully reconciled</td><td>0 of 5 stores</td><td>All 5 UAE stores confirmed and signed off</td></tr>
+<tr><td>Client relationship status</td><td>At risk — CPO escalation active</td><td>Trust restored; expansion offer signed</td></tr>
+<tr><td>Contract scope</td><td>5-store deployment</td><td>Expanded to 25 stores</td></tr>
+<tr><td>Additional annual revenue</td><td>—</td><td>$380K generated from contract expansion</td></tr>
+<tr><td>Contract value preserved</td><td>—</td><td>$140K in at-risk contract retained</td></tr>
+<tr><td>Time to full resolution</td><td>Ongoing, no assigned owner</td><td>15 days from initial assignment</td></tr>
+<tr><td>Settlement monitoring posture</td><td>Reactive (client-flagged)</td><td>Proactive daily automated alerting</td></tr>
+<tr><td>Process documentation</td><td>None</td><td>Full SOP + automation + junior dev KT</td></tr>
+</tbody>
+</table>
+
+## Outcomes & Business Impact
+
+### Beyond the Numbers
+
+The impact of this project extended beyond its direct financial metrics. Grandiose's decision to expand to 25 stores was a signal that proactive, transparent ownership during the crisis had strengthened the relationship beyond its pre-crisis baseline. The automated reconciliation framework built during this investigation became a reference implementation adopted for other high-volume UAE clients, multiplying its value across Mishipay's Middle East portfolio.
+
+This project also illustrated how engineering-led product thinking—structuring a complex investigation with clear phases, measurable milestones, and stakeholder-appropriate communication—can drive significant commercial outcomes in a startup environment where role boundaries are fluid and ownership is earned.
+
+## Lessons Learned
+
+**1. Proactive ownership is a competitive differentiator**
+
+In a fast-scaling startup, gaps in account ownership surface regularly. Stepping into ambiguity without being asked, especially on a high-visibility crisis, built credibility with both internal leadership and the client simultaneously. The reputational risk of owning a broken client situation was lower than the cost of waiting for assignment while the relationship deteriorated.
+
+**2. Structured investigation outperforms fast guessing**
+
+The instinct in a live client crisis is to ship fixes immediately. The right first move was asking "who understands this system?" not "what's broken?" I had never traced a payment transaction flow before, and spending time with Mishipay's payments team before touching any data was what made the investigation tractable. From there, disciplined phase-gating, mapping data ownership before writing scripts, building reconciliation logic before forming hypotheses, validating against historical data before communicating, prevented incorrect fixes that could have extended the timeline. Slowing down in the early phases significantly accelerated the overall resolution.
+
+**3. Communication cadence rebuilds trust incrementally**
+
+Client confidence was restored through a series of milestone-based updates across 15 days, not through a single resolution announcement at the end. Structuring each client touchpoint around what had been confirmed, store by store, made 15 days of investigation feel like a series of forward moments rather than a silence followed by a resolution. Trust is rebuilt in installments.

@@ -4,8 +4,23 @@ import Link from 'next/link';
 import matter from 'gray-matter';
 import type { CaseStudyFrontmatter } from '@/lib/types';
 import { projects } from '@/config/projects';
+import { CaseStudyTOC } from '@/components/ui/CaseStudyTOC';
 
 const CONTENT_DIR = path.join(process.cwd(), 'src/content/projects');
+
+function slugify(text: string) {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-');
+}
+
+// Mirrors next.config.mjs's rehypeHeadingIds so anchors match the rendered h2 ids
+function extractSections(markdown: string) {
+  const matches = markdown.matchAll(/^##(?!#)\s+(.+)$/gm);
+  return Array.from(matches).map((m) => ({ title: m[1].trim(), id: slugify(m[1].trim()) }));
+}
 
 export async function generateStaticParams() {
   if (!fs.existsSync(CONTENT_DIR)) return [];
@@ -78,8 +93,9 @@ export default async function CaseStudyPage({
 }) {
   const filePath = path.join(CONTENT_DIR, `${params.slug}.mdx`);
   const rawFile = fs.readFileSync(filePath, 'utf-8');
-  const { data } = matter(rawFile);
+  const { data, content } = matter(rawFile);
   const fm = data as CaseStudyFrontmatter;
+  const sections = extractSections(content);
 
   const { default: MDXContent } = await import(
     `@/content/projects/${params.slug}.mdx`
@@ -136,7 +152,7 @@ export default async function CaseStudyPage({
           fontFamily: 'var(--font-playfair), "Playfair Display", serif',
           fontStyle: 'italic',
           fontWeight: 900,
-          fontSize: 'clamp(32px, 5vw, 56px)',
+          fontSize: 'clamp(26px, 3.6vw, 42px)',
           color: 'var(--color-heading)',
           lineHeight: 1.1,
           marginBottom: '20px',
@@ -187,7 +203,7 @@ export default async function CaseStudyPage({
           <div style={{ display: 'flex', border: '1px solid var(--color-border)', borderRadius: '12px', background: '#fff', overflow: 'hidden', marginBottom: '36px', boxShadow: '0 2px 12px rgba(43,108,176,0.07)' }}>
             {fm.metrics.map((m, i) => (
               <div key={i} style={{ flex: 1, padding: '20px 24px', borderRight: i < fm.metrics.length - 1 ? '1px solid var(--color-border)' : 'none', textAlign: 'center' }}>
-                <p style={{ fontSize: '32px', fontWeight: 900, color: 'var(--color-accent)', lineHeight: 1, fontFamily: 'var(--font-inter), Inter, sans-serif' }}>{m.value}</p>
+                <p style={{ fontSize: '24px', fontWeight: 900, color: 'var(--color-accent)', lineHeight: 1, fontFamily: 'var(--font-inter), Inter, sans-serif' }}>{m.value}</p>
                 <p style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--color-muted)', letterSpacing: '0.08em', marginTop: '6px' }}>{m.label}</p>
               </div>
             ))}
@@ -218,32 +234,36 @@ export default async function CaseStudyPage({
       </div>
 
       {/* Content */}
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '48px 120px 64px' }}>
-        {fm.summary && (
-          <p style={{ fontSize: '16px', color: 'var(--color-body)', lineHeight: 1.75, marginBottom: '36px', paddingBottom: '36px', borderBottom: '0.5px solid var(--color-border)', fontWeight: 400 }}>
-            {fm.summary}
-          </p>
-        )}
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '48px 120px 64px', display: 'grid', gridTemplateColumns: sections.length > 0 ? '180px 1fr' : '1fr', gap: '56px', alignItems: 'start' }} className="case-study-grid">
+        {sections.length > 0 && <CaseStudyTOC sections={sections} />}
 
-        <article style={{ fontSize: '15px', color: 'var(--color-body)', lineHeight: 1.8 }} className="mdx-prose">
-          <MDXContent />
-        </article>
+        <div>
+          {fm.summary && (
+            <p style={{ fontSize: '16px', color: 'var(--color-body)', lineHeight: 1.75, marginBottom: '36px', paddingBottom: '36px', borderBottom: '0.5px solid var(--color-border)', fontWeight: 400 }}>
+              {fm.summary}
+            </p>
+          )}
 
-        {fm.externalLinks && fm.externalLinks.length > 0 && (
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', flexWrap: 'wrap', marginTop: '40px' }}>
-            {fm.externalLinks.map(link => (
-              <a
-                key={link.url}
-                href={link.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', border: '1px solid var(--color-heading)', borderRadius: '50px', padding: '10px 24px', fontSize: '13px', fontWeight: 500, color: '#fff', textDecoration: 'none', background: 'var(--color-heading)' }}
+          <article style={{ fontSize: '15px', color: 'var(--color-body)', lineHeight: 1.8 }} className="mdx-prose">
+            <MDXContent />
+          </article>
+
+          {fm.externalLinks && fm.externalLinks.length > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', flexWrap: 'wrap', marginTop: '40px' }}>
+              {fm.externalLinks.map(link => (
+                <a
+                  key={link.url}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', border: '1px solid var(--color-heading)', borderRadius: '50px', padding: '10px 24px', fontSize: '13px', fontWeight: 500, color: '#fff', textDecoration: 'none', background: 'var(--color-heading)' }}
               >
-                {link.label} <ArrowUpRightIcon />
-              </a>
-            ))}
-          </div>
-        )}
+                  {link.label} <ArrowUpRightIcon />
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Bottom bar */}
