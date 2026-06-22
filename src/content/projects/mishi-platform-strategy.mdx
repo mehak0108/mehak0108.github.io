@@ -16,23 +16,153 @@ metrics:
     label: "Continents"
   - value: "$3.3M+"
     label: "Combined revenue impact"
-externalLinks:
-  - label: "View Full Case Study"
-    url: "https://docs.google.com/document/d/1d1hMevTHFCNxG2w-TVYLxDgmALt0VwA7/edit?usp=sharing&ouid=100358671322377485595&rtpof=true&sd=true"
 ---
 
-## Problem
+## The Platform Design Challenge
 
-The standard answer to serving four structurally different retail environments, a duty-free airport retailer in Dubai, a sports venue in Toronto, a premium supermarket in the UAE, and a US grocery enterprise, is to build four separate products. That doesn't scale: each new client would mean rebuilding from scratch, and engine improvements for one client would never reach the others.
+The most common product strategy question in retail technology is: "How do you build a single platform that serves a duty-free airport retailer, a sports venue, a premium supermarket, and a US grocery giant simultaneously?" The answer isn't to build four separate products. The answer is to design a platform with a stable, shared core and a carefully structured customisation model that allows each retailer to get what they need without destabilising what works for everyone else.
 
-The real challenge was deciding, for every new requirement, where it should live: built once into a stable core that's never customized, built as a configurable capability that any client can activate with their own data, or built as an isolated extension specific to one client's business model or hardware. Getting this wrong in either direction — over-customizing or over-generalizing — accumulates technical debt that compounds with every new client.
+This case study documents how Mishipay's platform served four structurally different retail environments, the decisions made about what to build into the common core versus what to make configurable versus what to build as client-specific extensions, and how those decisions shaped both the product roadmap and the client outcomes.
 
-## Solution
+### The Framework: Core, Configurable, Bespoke
 
-I evaluated every integration decision across all four clients against a three-tier model. Platform Core covers what every client needs and is never customized: session management, basket engine, payment processing. Configurable Capability covers what multiple clients need but with different data — the engine is built once against a shared database schema, and each client's data loads in via a client-specific ETL script, so the promotions engine that runs Dubai Duty Free's discount days applies the exact same code to Grandiose's mix-and-match rules. Client Extension covers what's genuinely unique to one client's regulation or hardware — DDF's boarding pass scanner for duty-free eligibility, MLSE's RFID bulk-scan and closed-loop "Bucks" currency, Walmart's file-based posting fallback while their API wasn't ready.
+Every integration decision across all four clients was evaluated against a three-tier model.
 
-The discipline was resisting client pressure to treat every configured capability as a custom build. When a client-specific extension proved useful elsewhere — MLSE's RFID adapter, Grandiose's NI reconciliation tooling, Walmart's multi-jurisdiction tax engine — I promoted it into the configurable or core layer, so each new client's gap became a capability available to every future client at no extra build cost.
+<table>
+<thead>
+<tr><th>Tier</th><th>Decision Criteria</th><th>Examples</th></tr>
+</thead>
+<tbody>
+<tr><td>Platform Core</td><td>Will every client need this? Does its absence break the basic checkout flow? Build it once, test it thoroughly, never customise it per client.</td><td>Session management, basket engine, payment processing, product service, order fulfilment</td></tr>
+<tr><td>Configurable Capability</td><td>Will multiple clients need this, but with different data? Build the core engine once against a shared database schema. Each client's data is loaded into that schema via a client-specific ETL Python script that handles their source format. The engine is untouched per client, client-specific code lives only in the ETL parsing script.</td><td>Promotions engine (client data loaded via ETL script into shared DB), tax engine (client rates via ETL), loyalty integration, hardware adapters</td></tr>
+<tr><td>Client Extension</td><td>Is this specific to one client's business model, regulation, or hardware? Build it as an isolated extension that does not touch the core. Evaluate whether it can be generalised after the first deployment.</td><td>DDF boarding pass scanner, MLSE RFID + Bucks, Walmart file-based posting fallback</td></tr>
+</tbody>
+</table>
 
-## Outcome
+The discipline is in the middle tier. The natural pressure, from clients, is to treat every configured capability as a custom build. Resisting that pressure, and investing in the configuration model instead, is what keeps the platform maintainable as the client portfolio grows. It also creates a compounding benefit: each new configuration option becomes available to all future clients at no additional build cost.
 
-The platform now runs Dubai Duty Free's 200,000+ SKU catalog with LAG eligibility rules, MLSE's RFID checkout (78% faster, $1.1M incremental revenue), Grandiose's dual loyalty/non-loyalty promotion forking (Talon One integration delivered in 10 days against a 30-day estimate), and Walmart's multi-jurisdiction US tax model — combining for $3.3M+ in revenue impact across clients on three continents. Capabilities built for one client, RFID for MLSE, the tax engine for Walmart, reconciliation tooling for Grandiose, became standard configurable options for every client that came after.
+## Platform Architecture — Three-Tier Model
+
+The diagram below shows the three-tier platform architecture. The bottom tier (Platform Core) is never modified for any client. The middle tier (Configurable Layer) is activated and configured per client. The top tier shows how each client's specific requirements built on top of those configurable capabilities.
+
+<figure>
+  <img src="/images/projects/mishi-platform-architecture.png" alt="Mishipay platform architecture across three tiers: client extensions on top, configurable layer in the middle, and platform core at the bottom" />
+  <figcaption>Client extensions sit on a configurable layer, which sits on a platform core that's never modified per client</figcaption>
+</figure>
+
+The arrows between tiers show the direction of extension. Platform Core capabilities are extended by the Configurable Layer. Configurable capabilities are extended by Client-Specific extensions. When a client-specific extension proves useful to multiple clients, it's a candidate for promotion to the Configurable Layer, this is how the platform grows over time without accumulating technical debt.
+
+A key architectural principle: client customisation in the Configurable Layer works at the ETL layer, not in the engine. Each client's promotion rules, tax rates, and product data are loaded into a shared database via a client-specific ETL Python script that parses whatever format their source data arrives in. The core promotion and tax engines then apply shared logic against whichever client's data is in the database. The client-specific code lives entirely in the ETL parsing script, the engines are never modified per client.
+
+## Client Deep Dive 1: Dubai Duty Free
+
+### Dubai Duty Free — Airport Duty-Free Retail, UAE
+
+One of the world's largest duty-free retailers · 200,000+ SKUs · Airport terminals · Arrival and departure zones · $130K subscription revenue · 4X increase in transaction throughput
+
+#### What Made This Client Unique
+
+Duty-free retail is governed by rules that have no equivalent in standard retail: purchase eligibility depends on a passenger's nationality, destination, and remaining duty-free allowance, not just their age. A passenger flying to certain countries cannot purchase certain categories. These rules change frequently and must be evaluated at the point of scan, not at payment. This is a fundamentally different model from any other retail context.
+
+- **LAG items (Liquids, Aerosols, Gels):** IATA aviation security regulations govern how liquid perfumes, aerosol sprays, and gel products can be sold in duty-free. LAG items must be packed in tamper-evident security bags, are subject to quantity limits per passenger, and have purchase eligibility rules that depend on the passenger's departure and destination airports, certain connecting routes prohibit LAG above specific volumes. LAG items also require a separate billing type in the POSLog to distinguish them from standard purchases.
+- **Void flow:** when a customer adds an item to their digital basket and then decides to remove it, a staff member can void that specific line item from the active session via the staff dashboard, without cancelling the entire transaction. Unlike a transaction void, an item void removes a single product while the basket and session remain active for the remaining items.
+- **Shift reporting:** airport retail staff work in shifts across a 24-hour operation. They needed poslog-level reporting per shift, per kiosk, per staff member.
+- **mPOS for arrival stores:** passengers clearing customs at arrival need a different checkout experience than departure zone shoppers. 20 arrival stores were equipped with mPOS devices running the same platform but in a mobile-first layout.
+
+#### Platform Decisions Made
+
+- **Boarding pass scanner → Client Extension:** No other retailer needed duty-free eligibility gating. Built as a fully isolated integration that evaluates purchase eligibility rules from the product catalog without touching the basket engine or payment flow. Candidate for generalisation if Mishipay enters other travel retail markets.
+- **LAG handling → Client Extension:** LAG eligibility rules, tamper-bag requirements, quantity limits, and the separate billing type in the POSLog are specific to aviation duty-free retail under IATA regulations. Built as an isolated extension to the product catalog (a LAG flag per SKU) and the checkout flow (LAG item grouping and separate billing). No other retail context has this requirement.
+- **Void flow → Configurable:** staff-assisted line-item removal from an active basket is useful in any staffed retail environment. Built as a configurable capability that activates when a staff role is present in the session, not DDF-specific. Available to any retailer that needs staff to be able to remove items from a customer basket without cancelling the whole session.
+- **Shift reporting → Configurable:** The reporting module was extended with shift-level aggregation and staff attribution. Now available as a standard configurable report for any retailer with shift-based operations.
+- **mPOS → Hardware Adapter (existing capability, new form factor):** The platform already supported mPOS. DDF required a new physical layout and a different checkout flow for the arrival context. Handled within the existing hardware adapter without changes to core payment or product logic.
+
+## Client Deep Dive 2: MLSE — Maple Leaf Sports & Entertainment
+
+### MLSE — Real Sports Apparel, Scotiabank Arena, Toronto
+
+Sports venue retail · 82 home events/season · 15-minute intermission windows · $1.1M incremental revenue · +55% YoY · 78% checkout time reduction
+
+#### What Made This Client Unique
+
+Sports venue retail operates under extreme time compression. A 15-minute intermission creates a demand spike that exceeds what any conventional checkout model can serve. The fan experience is the product, a checkout process that costs fans two minutes of a game they paid hundreds of dollars to attend is a failure, regardless of whether the transaction completed. Every integration decision for MLSE was evaluated against a single question: does this fit inside the time a fan is willing to spend away from their seat?
+
+- **RFID bulk scan:** the merchandise at Scotiabank Arena uses soft RFID labels. Rather than scanning items individually, a fan places their entire selection in the RFID zone and all items are read simultaneously in approximately three seconds. This required a completely new hardware capability and a different session initiation flow.
+- **Bucks:** MLSE operates a closed-loop stored value currency for loyal fans. Bucks cannot be redeemed at a standard card terminal, they require a dedicated payment method integration with MLSE's internal loyalty system, including split-tender logic when the Bucks balance is insufficient to cover the full basket value.
+- **Custom jerseys:** fans frequently purchase customisable jerseys with a chosen player name and number. The checkout flow needed to collect personalisation data inline, after RFID scan and before payment, without requiring a separate queue or staff interaction.
+
+#### Platform Decisions Made
+
+- **RFID → New hardware capability, now in platform:** RFID bulk scan didn't exist in the platform before MLSE. It was designed as a configurable hardware adapter from day one, not as MLSE-specific code, so that apparel retailers on the platform could adopt it without a new build. MLSE was the pilot; the capability is now available to all.
+- **Bucks → Client Extension with generalisation path:** Bucks is a closed-loop currency specific to MLSE. However, the underlying pattern, a stored-value balance deducted before card settlement, is applicable to any retailer with a gift card or internal credit system. The Bucks integration was built with this in mind, and the split-tender logic it required was added to the payment configuration model.
+- **Custom jerseys → Client Extension:** The inline personalisation flow for jerseys is specific to sports merchandise. It was built as a screen-level extension that intercepts the payment step for specific SKU types flagged in the product catalog. No changes to the basket engine or payment layer.
+
+## Client Deep Dive 3: Grandiose — Premium Supermarket, UAE
+
+### Grandiose Supermarkets — Premium Supermarket Chain, UAE
+
+40 stores · High transaction volume · Loyalty-driven customer base · +5% sales conversion · +20% BMRR YoY · Talon One integration delivered in 10 days vs. 30-day estimate
+
+#### What Made This Client Unique
+
+Grandiose pushed the platform harder on promotion complexity than any other client. The promotions engine already existed, DDF used it for discount days and MLSE used it for coupons, but Grandiose needed two distinct checkout flows based on whether the customer presented a loyalty card. Without loyalty, the core promotions engine applied discounts using ETL-loaded rules from the database. With loyalty, the flow forked entirely, Talon One's open and close session APIs took over, evaluating the basket and returning exactly which discount to apply on which item, with the core engine playing no part. The complexity was in correctly forking these two paths at session start and handling edge cases like mid-session abandonment independently within each flow.
+
+- **Mix and match promotions:** the core promotions engine is shared across all clients and applies promotion logic against whatever data is in the shared database. What Grandiose required was a client-specific ETL Python script that could parse their promotion file format, which item categories qualify, what combinations trigger a discount, what the discount value is, and load it into the shared database schema. The core engine then applied the logic. No changes to the engine were needed.
+- **Combo deals:** same pattern. Grandiose's combo SKU pairs and fixed-price rules were parsed by the ETL script and stored in the database. The core engine evaluates them at basket calculation time using the same shared logic it uses for all clients.
+- **Staff discount gating:** staff members receive a discount on all items. But the discount only applies when the session is authenticated with a staff loyalty ID, and it must not be combinable with customer-facing promotions. The promotions engine needed an identity gate.
+- **Talon One loyalty integration:** Grandiose uses Talon One, a third-party loyalty platform. This required a full REST API integration for member identification, balance lookup, and earn, all in real time during the checkout session.
+- **Transaction reconciliation:** a live discrepancy between Mishipay's transaction records and Network International's settlement data required a Python-based reconciliation tool and a fix to the NI API status code handling. This was a platform reliability issue surfaced by Grandiose but applicable to any client using NI as a payment gateway.
+
+#### Platform Decisions Made
+
+- **Promotions → Core engine + ETL script:** the backend promotions engine is shared across all clients, it reads from a shared database and applies the same logic regardless of which client's data is loaded. For Grandiose, a client-specific ETL Python script was written to parse Grandiose's promotion file format and load it into the shared database. The engine that runs DDF's discount day rules and MLSE's coupons then applied Grandiose's rules using the same code. No Grandiose-specific code in the engine itself.
+- **Third-party loyalty → Configurable pattern:** the Talon One integration was built using the same adapter pattern as other loyalty providers. Any third-party loyalty system with a REST API can now be integrated using the same framework, with the specific API calls configured per client.
+- **Reconciliation tooling → New platform capability:** the Python reconciliation scripts built for Grandiose became part of the platform's operational toolkit, used by the support team to diagnose settlement discrepancies for all gateway clients.
+
+## Client Deep Dive 4: Walmart — US Grocery Enterprise
+
+### Walmart — US Grocery, Multiple Store Types
+
+US enterprise grocery retailer · Multiple store formats · Multi-jurisdiction US sales tax · $1M transaction data sent · 60% reduction in client leadership analysis time
+
+#### What Made This Client Unique
+
+Walmart introduced two challenges that had no precedent in the platform: an integration dependency failure (their own API wasn't ready when the project began) and US sales tax complexity. US sales tax is one of the most complicated tax systems in retail, it varies by state, county, city, and item type simultaneously. A jersey in one state is taxable; the same jersey in another state is not. A prepared food item has a different rate from a packaged food item in the same store. This can't be handled by a flat-rate tax configuration.
+
+- **API not ready:** Walmart's financial data API was under development when the project started. Rather than blocking the integration, a file-based posting mechanism was proposed and implemented per store type as an interim solution. This required designing a file format that would be straightforward to replace with the API when it became available.
+- **Multi-jurisdiction tax:** the platform's tax engine supported configurable flat rates (UAE VAT, Canadian GST/HST) but not the rule-based, jurisdiction-stacked model US retail requires. This forced a meaningful extension of the tax engine.
+- **Staff understanding:** the tax configuration was complex enough that Walmart's own operations staff struggled to validate it. The issue wasn't the system, it was that staff didn't have a mental model for why a transaction at Store A had a different tax breakdown than the same items at Store B. Running training sessions to explain the underlying logic was a product gap, not a training problem.
+
+#### Platform Decisions Made
+
+- **File-based integration → Configurable fallback pattern:** the decision to build file-based posting as a first-class configurable option (rather than a workaround) proved valuable. It's now available to any client whose ERP system doesn't support real-time API integration. The pattern is documented and the switch from file to API is a configuration change, not a rebuild.
+- **Multi-jurisdiction tax → Platform core extension:** US sales tax complexity exposed a genuine gap in the tax engine. The rule-based jurisdiction model built for Walmart was integrated into the core tax engine, not as a Walmart-specific override. This benefits all future US retailer deployments.
+- **Staff training as a product insight:** the fact that staff couldn't understand the tax configuration without training was a signal that the dashboard representation of tax breakdowns was insufficient. This was logged as a product improvement, the reporting layer should surface tax logic in a way that's self-explanatory, not dependent on external training. This feeds directly back into the product roadmap.
+
+## Platform Design Principles
+
+What this portfolio reveals about platform product thinking:
+
+<table>
+<thead>
+<tr><th>Principle</th><th>How it showed up across the four clients</th></tr>
+</thead>
+<tbody>
+<tr><td>The engine is shared; the ETL script is client-specific</td><td>Each client's promotion rules and tax rates are loaded into a shared database via a client-specific ETL Python parsing script that handles their source data format. The database schema and the core engines stay the same across all clients. Adding a new client means writing an ETL script for their format, not changing the engine. This means engine improvements and bug fixes benefit all clients simultaneously without per-client deployments.</td></tr>
+<tr><td>Decide where something lives before you build it</td><td>Every new capability across all four clients was assigned to a tier (core / configurable / extension) before development began. This single discipline prevented ad-hoc customisation from accumulating into unmaintainable client-specific code paths.</td></tr>
+<tr><td>Client-specific requirements are data points about where the platform is incomplete</td><td>Walmart's tax complexity, Grandiose's promotions rules, and MLSE's RFID requirement weren't just client needs, they were signals that the platform had gaps. Each was resolved in a way that benefited future clients, not just the client that surfaced it.</td></tr>
+<tr><td>Configuration is a product feature, not an engineering choice</td><td>The promotions engine, loyalty integration, and tax engine are valuable not because they exist, but because they can be configured per client without code changes. Investing in the configuration model is a product investment that compounds with each new client.</td></tr>
+<tr><td>When an API dependency fails, the product roadmap still has to deliver</td><td>Walmart's API not being ready was an external constraint. Designing a file-based fallback that was a clean, replaceable integration, rather than a hack, kept the project on track and created a reusable pattern for future clients with integration gaps.</td></tr>
+</tbody>
+</table>
+
+### Client Customisation Matrix
+
+The matrix below summarises how each capability was delivered across the four clients. Standard means it worked out of the box. Configured means the standard capability was set up with client-specific parameters. Bespoke means something was built that didn't previously exist in the platform.
+
+<figure>
+  <img src="/images/projects/mishi-customisation-matrix.png" alt="Platform customisation matrix across DDF, MLSE, Grandiose, and Walmart, showing which capabilities were standard, configured, core plus ETL, or bespoke per client" />
+  <figcaption>Standard, configured, core + ETL, or bespoke per client, across checkout hardware, payments, promotions, loyalty, tax, data pipeline, compliance, and reporting</figcaption>
+</figure>
+
+The pattern is clear: hardware and loyalty are where bespoke work concentrates, because both are driven by physical infrastructure and contractual relationships that the platform cannot abstract away. Tax and data pipeline are the areas where configurable capabilities save the most time across clients, building them well once is far more valuable than rebuilding them four times.

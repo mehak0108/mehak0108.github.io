@@ -16,25 +16,165 @@ metrics:
     label: "Transaction value processed"
   - value: "200K+"
     label: "Largest single catalog (SKUs)"
-externalLinks:
-  - label: "View Full Case Study"
-    url: "https://docs.google.com/document/d/1PcN0eVed7yltTFiT5jdveT53RU5h_0Fn/edit?usp=sharing&ouid=100358671322377485595&rtpof=true&sd=true"
 ---
 
-## Problem
+## The Problem: Why a Custom Pipeline
 
-Every retailer onboarding to Mishipay brought a different source system: a UAE supermarket sending nightly flat files from SAP, a Danish retailer expecting real-time REST posting, a US grocery chain whose API wasn't ready, a Dubai duty-free operator sending 200,000+ SKUs with RFID tags and duty-free allowance rules in custom fields. Off-the-shelf ETL tools like Fivetran handle standard schemas — they don't handle a SKU that's in column 3 of one client's CSV and a field called "item_reference" in another's JSON.
+Every retailer that onboards to Mishipay brings its own source systems, data formats, and operational expectations. A UAE premium supermarket sends its product catalog as a nightly flat file from SAP. A Danish variety retailer expects real-time transaction posting via REST API. A US grocery chain's API wasn't ready at all, requiring a file-based integration as an interim. A Dubai duty-free operator sends 200,000+ SKUs with RFID tag IDs, LAG eligibility flags, and duty-free allowance rules embedded in custom fields.
 
-The real design question was how to make it reliable enough to power live retail checkout, flexible enough for any source format, and maintainable enough that onboarding clients didn't mean rebuilding from scratch.
+Off-the-shelf ETL tools like Fivetran or Stitch handle standard schemas well. They don't handle the case where a retailer sends a CSV in which the SKU is in column 3 for one client and in a field called "item_reference" in a JSON response for another. The parsing logic is client-specific by necessity, it lives in the ETL layer, not in the core platform.
 
-## Solution
+The real design question was: how do you build a pipeline that's reliable enough to power live retail checkout, flexible enough to handle any source format, and maintainable enough that a new client doesn't require rebuilding from scratch?
 
-I structured the architecture around three answers: extraction logic is fully client-specific (one Python parsing script per client is the only place client code lives), transformation and load are shared and identical regardless of source, and data latency requirements vary by type — so the pipeline runs two tracks. Batch (Airflow, scheduled) handles product catalogs and promotions, where overnight latency is acceptable. Real-time (Kafka + Azure Serverless) handles order transactions and loyalty events, where a delay of even minutes causes real problems.
+### Three Questions That Drove the Architecture
 
-Before integrating any new client, I established a data contract with their IT team, specifying exact fields, types, nullability, and delivery method. This caught the kind of mismatch that would otherwise surface as a production incident; for DDF's 200,000-SKU catalog, a single undocumented null in the tax code field would have caused thousands of checkout failures on go-live day.
+<table>
+<thead>
+<tr><th>Design Question</th><th>Answer</th><th>Implication</th></tr>
+</thead>
+<tbody>
+<tr><td>How flexible does extraction need to be?</td><td>Fully client-specific, each retailer's source format is unique</td><td>One Python parsing script per client; the script is the only place client-specific code lives in the pipeline</td></tr>
+<tr><td>How fast does data need to flow?</td><td>Depends on the data type, products can wait overnight; orders cannot wait at all</td><td>Two separate pipeline tracks: scheduled batch for catalog data, event-driven real-time for transactional data</td></tr>
+<tr><td>What happens when the pipeline breaks?</td><td>The kiosk must still function, graceful degradation over hard failure</td><td>Failure handling is a product specification, not just an engineering concern — agreed with the client before build</td></tr>
+</tbody>
+</table>
 
-The most consequential design decision was failure handling, treated as a product specification rather than an engineering afterthought. I defined the acceptable degradation for each failure mode with the client before build: if `product_sync` fails overnight, the kiosk serves yesterday's catalog rather than failing; if `order_export` fails, transactions still complete on the kiosk and queue locally for idempotent re-export. The principle driving all of it: checkout is the revenue-generating moment, and no backend pipeline failure should ever be the reason a customer can't complete a purchase.
+## End-to-End Pipeline Architecture
 
-## Outcome
+The diagram below shows the two pipeline tracks. The batch track handles product catalog and promotions data on a scheduled basis. The real-time track handles order events, payment callbacks, and loyalty events via Apache Kafka and Azure Serverless Functions. Both tracks share the same transformation layer, the difference is in how data enters and how quickly it must be delivered.
 
-The pipeline now powers 10+ retail clients on a shared transformation and load layer, with each client's quirks isolated to a single parsing script. Load testing validated capacity to 4.4M transactions for Flying Tiger Copenhagen alone, which posted $46.8M in transaction value via the rebuilt event-driven pipeline after the original synchronous integration became a bottleneck. Dubai Duty Free's 200,000+ SKU catalog syncs nightly with zero manual intervention, contributing to a 35% average basket increase. Event Network's migration from file-based to real-time API posting drove a 7.6% footfall capture lift against a 0.8% expectation.
+<figure>
+  <img src="/images/projects/etl-pipeline-architecture.png" alt="Product and promotions data pipeline architecture, showing batch and real-time tracks through extract, transform and validate, load, and platform targets" />
+  <figcaption>Batch and real-time tracks share the same transformation and load layers</figcaption>
+</figure>
+
+The key design principle: the ETL Python script is client-specific (it handles source format differences), but the transformation and load layers are shared. Once data passes through the parsing script, it conforms to Mishipay's canonical schema and is handled identically regardless of which client it came from.
+
+## Source Systems & Data Contracts
+
+### The Variety of Source Systems
+
+Across ten-plus client integrations, Mishipay's pipeline has consumed data from flat files delivered via SFTP, Oracle REST APIs, Shopify APIs, custom Excel files, and proprietary inventory system exports. Each source delivers different field names, different encodings, different date formats, and different ways of expressing the same concepts. A tax code in one retailer's system maps to a different code in another's. A promotions rule that Grandiose calls a "promotion_group" is what DDF calls a "discount_type."
+
+<table>
+<thead>
+<tr><th>Client</th><th>Source System</th><th>Format</th><th>Delivery Method</th><th>Key Complexity</th></tr>
+</thead>
+<tbody>
+<tr><td>DDF</td><td>ERP</td><td>Flat file (pipe-delimited)</td><td>SFTP nightly</td><td>200K+ SKUs; LAG eligibility flags; duty-free allowance fields</td></tr>
+<tr><td>FTC</td><td>Custom POS API</td><td>JSON REST</td><td>API poll</td><td>Transaction posting; 4.4M transaction capacity; load tested 80K in 10 hrs</td></tr>
+<tr><td>Grandiose</td><td>Oracle ERP</td><td>JSON REST + flat file</td><td>API + SFTP</td><td>Promotion rules (5 types); Talon One loyalty; tax code mapping</td></tr>
+<tr><td>Walmart</td><td>Proprietary</td><td>Flat file per store type</td><td>SFTP (interim)</td><td>API not ready; multi-jurisdiction US tax; per-store-type configuration</td></tr>
+<tr><td>Event Network</td><td>Xstore POS</td><td>REST API</td><td>API (replaced files)</td><td>Replaced file-based posting with API; $1.1M consolidated real-time</td></tr>
+</tbody>
+</table>
+
+### The Data Contract
+
+Before writing any ETL parsing script, Mishipay agrees a data contract with the retailer's IT team. The contract specifies the exact fields that will be provided, their data types, which fields are nullable, the update frequency, and the delivery mechanism. This is a product artefact, it protects both sides from scope creep and gives the integration team a clear target.
+
+Investing in a formal data contract before development starts prevents the most common source of mid-project rework: discovering that a required field is missing, has a different format than expected, or isn't populated for a subset of records. For DDF's 200,000-SKU catalog, a single undocumented null field in the tax code column would have caused thousands of checkout failures on go-live day.
+
+When a retailer changes their source file format without notice, which happens, the ETL script's validation layer catches the change at extraction time and alerts the team before corrupted data reaches the shared database. This is preferable to discovering the issue when a kiosk fails to find a product at checkout.
+
+## Airflow DAG Architecture
+
+### Why Airflow over Cron Jobs
+
+Simple cron jobs handle scheduling, but they provide no visibility into task dependencies, no built-in retry logic, no alerting on failure, and no way to reprocess historical data. Apache Airflow gives the pipeline operator a live view of every run, every task state, and every failure. When a product sync fails at the transform stage, Airflow makes it immediately clear which task failed, what error it returned, and whether the retry policy has been exhausted, without requiring log inspection.
+
+- **Task dependencies:** Airflow enforces that the load task only runs if validation passed. A failed validation cannot silently allow corrupt data to load.
+- **Idempotency:** every load task is designed to produce the same result if run twice, critical for retry logic. Running `product_sync` twice on the same data doesn't create duplicate SKUs.
+- **Backfill capability:** if a sync was missed (due to a source system outage), the pipeline can be triggered manually for a specific date range and will reprocess correctly.
+- **Observability:** every task run, its duration, its exit state, and its output are recorded. This made it possible to identify the FTC bottleneck, a specific task was taking 40 minutes for 80K transactions, exposing the architectural limit before it hit 4.4M in production.
+
+### Airflow DAG Structure & Failure Handling
+
+<figure>
+  <img src="/images/projects/etl-airflow-dag.png" alt="Airflow DAG architecture for product_sync, showing the success path, failure path, and full DAG inventory across product_sync, promotions_sync, order_export, and settlement_sync" />
+  <figcaption>product_sync success and failure paths, plus the full DAG inventory</figcaption>
+</figure>
+
+The top half of the diagram shows the `product_sync` DAG in detail. The six-task success path runs nightly at 02:00 UTC. Each task has a retry policy of three attempts with exponential backoff (1 minute, 2 minutes, 4 minutes). The failure path shows what happens at each failure point and what the operational response is. The bottom half shows the full DAG inventory, each pipeline with its schedule, retry policy, alert threshold, and the business impact of a failure.
+
+The alert threshold differs per DAG deliberately. For `product_sync`, alerting after retry 1 gives the team time to investigate before the store opens. For `promotions_sync` and `settlement_sync`, alerting immediately reflects the higher business cost of those failures, wrong promotions at checkout and blocked financial reconciliation respectively.
+
+## Real-Time vs. Batch: The Design Decision
+
+The most consequential pipeline design decision is about acceptable data latency. Making everything real-time would reduce latency to near-zero for all data types, but at the cost of significantly higher operational complexity, more failure modes, and higher infrastructure cost. Making everything batch would eliminate complexity, but mean a promotion change takes until the next morning to take effect. The right answer is a deliberate hybrid based on the business impact of stale data for each data type.
+
+<table>
+<thead>
+<tr><th>Data Type</th><th>Acceptable Latency</th><th>Chosen Approach</th><th>Business Reason</th></tr>
+</thead>
+<tbody>
+<tr><td>Product catalog</td><td>Up to 24 hours</td><td>Batch — 02:00 UTC nightly</td><td>Products rarely change intraday. Price or name updates can wait until overnight sync without customer impact.</td></tr>
+<tr><td>Promotions rules</td><td>Before store opens</td><td>Batch — 04:00 UTC + on-demand trigger</td><td>Must be active when the first transaction runs. An on-demand trigger handles urgent same-day promotion changes.</td></tr>
+<tr><td>Order transactions</td><td>Seconds</td><td>Real-time — Kafka event-driven</td><td>Retailers need transaction data for inventory and financial systems immediately. A 15-minute lag causes operational issues.</td></tr>
+<tr><td>Loyalty earn</td><td>Seconds</td><td>Event-triggered post-payment</td><td>Customer's loyalty points must post before they leave the store. A delayed earn is a trust failure.</td></tr>
+<tr><td>Settlement</td><td>End of day</td><td>Batch — 23:30 UTC EOD</td><td>Payment reconciliation follows a natural EOD cycle. Intraday settlement provides no additional value.</td></tr>
+</tbody>
+</table>
+
+The 24-hour latency window for product data was an explicit product decision agreed with each client. It's a trade-off: nightly batch is simpler, cheaper, and has fewer failure modes than continuous sync. Agreeing this boundary with the client before build prevents the expectation mismatch that turns into a support escalation at 09:00 when a price change from 08:30 hasn't yet propagated.
+
+## Transformation Logic
+
+### Product Data Normalisation
+
+The transformation layer converts each retailer's native data format into Mishipay's canonical product schema. The same product fields exist in every retailer's system, but they arrive under different names, in different types, and with different encodings. The transform step handles this without any client-specific code in the shared transformation module, the client-specific mapping lives in the ETL parsing script that precedes it.
+
+<table>
+<thead>
+<tr><th>Retailer Field (example)</th><th>Mishipay Canonical Field</th><th>Transform Applied</th></tr>
+</thead>
+<tbody>
+<tr><td>item_code / product_id / SKU</td><td>sku</td><td>Field alias resolution; strip leading zeros if numeric</td></tr>
+<tr><td>price / retail_price / unit_cost</td><td>price</td><td>Currency normalisation; ensure decimal precision (2dp)</td></tr>
+<tr><td>tax_group / vat_code / tax_class</td><td>tax_code</td><td>Map retailer tax code to Mishipay tax engine format</td></tr>
+<tr><td>rfid_tag / epc_code / tag_id</td><td>rfid_tag_id</td><td>EPC format normalisation; validate tag ID length and structure</td></tr>
+<tr><td>promo_flag / discount_eligible</td><td>promotions_eligible</td><td>Boolean normalisation; handle 0/1, Y/N, true/false variants</td></tr>
+<tr><td>stock_qty / available / on_hand</td><td>stock_available</td><td>Integer cast; null → 0 (not null → out-of-stock block)</td></tr>
+</tbody>
+</table>
+
+### Promotions Rule Parsing
+
+Promotions data is the most complex transformation in the pipeline because each retailer expresses the same rule concepts in structurally different ways. Grandiose sends its mix and match rules as a flat file with a `promotion_group_id` and a comma-separated list of `qualifying_skus`. DDF sends its discount day rules as a JSON object with a `discount_type` field and an `item_category` code. Both need to be transformed into Mishipay's canonical promotion rule format before they can be loaded into the shared database and evaluated by the core promotions engine.
+
+- The promotion schema defines: `rule_type` (mix_and_match, combo, staff_discount, custom), `qualifying_items` (array of SKUs or category codes), `discount_value`, `discount_type` (percentage or fixed), and `validity_window`.
+- The parsing script for each client translates their native format into this canonical structure. Once loaded into the shared database, the core promotions engine evaluates all rules identically regardless of which client they came from.
+- Validation at this stage is critical: a promotion rule with a missing `qualifying_items` array will be rejected by the validator and won't load, rather than loading silently and failing to apply at checkout.
+
+Defining a promotion schema before onboarding the second client was the decision that made multi-client promotion management tractable. Without it, each client's promotions would be evaluated by client-specific logic in the core engine, a maintenance debt that compounds with every new client. The schema was designed to be expressive enough to represent every promotion type any client had requested up to that point, with an extension mechanism for future types.
+
+## Failure Handling — When the Pipeline Breaks Before a Store Opens
+
+When `product_sync` fails at 02:30, the question "what does the checkout experience look like?" is agreed with the client before building. Here are the four primary failure scenarios and the agreed response for each.
+
+<table>
+<thead>
+<tr><th>Failure Scenario</th><th>Immediate Effect</th><th>Agreed Response</th><th>Alert Level</th></tr>
+</thead>
+<tbody>
+<tr><td>product_sync fails overnight (retries exhausted)</td><td>Kiosk serves yesterday's product catalog. Price or product availability changes since last successful sync aren't reflected.</td><td>Kiosk continues operating on cached data. Acceptable up to 24 hours, most catalog changes are minor. Alert sent to engineering and customer success after retry 1. Manual re-trigger available.</td><td>Medium — alert after retry 1</td></tr>
+<tr><td>promotions_sync fails before store opens</td><td>Yesterday's promotion rules are active. A new promotion scheduled to start today doesn't apply at checkout.</td><td>Checkout continues with previous day's promotions. Alert sent immediately. Customer success notified to check with retailer. On-demand re-trigger available for urgent same-day fixes.</td><td>High — alert immediately</td></tr>
+<tr><td>order_export fails (Kafka consumer or DAG failure)</td><td>Transaction records aren't posted to the retailer's ERP. A gap forms in their financial and inventory data.</td><td>Transactions complete on the kiosk, checkout is never blocked by an outbound export failure. Orders are queued locally and re-exported when connectivity or the DAG restores. Re-export is idempotent, no duplicates.</td><td>Medium — alert after retry 2</td></tr>
+<tr><td>settlement_sync fails (EOD batch)</td><td>End-of-day financial reconciliation between Mishipay and the payment gateway doesn't complete. Manual reconciliation is required.</td><td>Alert sent immediately to engineering, payments team, and customer success. A manual settlement export command is available. This is the only failure mode with a potential financial impact, zero tolerance for silent failure.</td><td>Critical — alert immediately</td></tr>
+</tbody>
+</table>
+
+The decision that checkout should never be blocked by an outbound pipeline failure, `order_export`, `settlement_sync`, was the most important product call in failure handling design. The SCO kiosk is the revenue-generating moment. Any architecture where a backend pipeline failure stops a customer from completing a transaction is the wrong architecture. Separation of inbound data dependencies (product catalog must be fresh enough) from outbound reporting (can queue and retry) reflects this principle.
+
+## Business Impact
+
+<table>
+<thead>
+<tr><th>Project</th><th>Pipeline Contribution</th><th>Outcome</th></tr>
+</thead>
+<tbody>
+<tr><td>DDF (Dubai Duty Free)</td><td>200,000+ SKU catalog synced nightly via client ETL script from ERP; LAG eligibility flags and duty-free rules parsed and loaded correctly</td><td>$130K subscription revenue; 4% per-store revenue increase; 35% average basket increase; 87% in-store transaction penetration</td></tr>
+<tr><td>FTC (Flying Tiger Copenhagen)</td><td>Architected Kafka + Azure Serverless event-driven order and refund fulfilment pipeline, replacing a synchronous, brittle integration</td><td>$46.8M in transaction value posted via API; bottleneck resolved before production scale; results presented to 6-person client leadership</td></tr>
+<tr><td>Event Network</td><td>Replaced file-based transaction posting with API-driven real-time sync to Xstore ERP; consolidated transactional data delivered in real-time</td><td>$1.1M consolidated to Xstore; average basket value +9.03%; footfall capture +7.6% vs. 0.8% expected</td></tr>
+</tbody>
+</table>

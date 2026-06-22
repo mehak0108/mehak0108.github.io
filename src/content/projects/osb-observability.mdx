@@ -15,28 +15,148 @@ metrics:
     label: "Triage time reclaimed/yr"
   - value: "6 of 6"
     label: "Pools with live health coverage"
-coverImage: /images/projects/observability.png
-externalLinks:
-  - label: "View Full Case Study"
-    url: "https://docs.google.com/document/d/1iiMSDRVt1u2d8Xm1g04UGUvjGRzEzEA8/edit?usp=sharing&ouid=100358671322377485595&rtpof=true&sd=true"
 ---
 
-## Problem
+## Platform Context
 
-JPMC's internal service marketplace runs on the Open Service Broker (OSB) protocol, with ~20 internal teams exposing services across 6 datacenter pools. When a Create, Bind, Unbind, or Delete operation failed, the platform had no way to tell whether the fault was in the Gaia platform itself or in a specific provider's OSB implementation. Every failure escalated into a cross-team war room, with engineers spending 60–90 minutes just agreeing on fault domain before anyone started fixing anything.
+### The JPMC Internal Service Marketplace
 
-Detection was entirely reactive — failures surfaced only when a developer hit them and filed a ticket, often hours after the fault began. Pool-specific failures were nearly invisible: a service that worked in one pool but failed in another looked like a non-reproducible, intermittent bug. Alert channels were shared across all 20 providers, so teams couldn't distinguish their own failures from someone else's — leading to alert fatigue and missed critical signals. Leadership had no way to assess marketplace health without manually correlating incident tickets.
+JP Morgan Chase's Global Technology Infrastructure operates an internal service marketplace built on the Open Service Broker (OSB) API protocol, an industry-standard interface that defines how a platform can create, bind to, unbind from, and delete managed services on behalf of application developers. The marketplace runs on Gaia Cloud Foundry and is the primary mechanism through which internal JPMC engineering teams expose shared capabilities, databases, messaging queues, caching layers, identity services, and other infrastructure primitives, to application developers across the firm.
 
-## Solution
+Service providers in this context are internal JPMC technology teams who have implemented the OSB API specification and onboarded their services onto the marketplace. Once onboarded, their services become available to any application team deploying on Gaia across multiple geographic pools — na-4b, na-4c, and others — each representing an isolated datacenter environment with its own network, compute, and service fabric configuration.
 
-Discovery across service providers, platform engineering, and Service Fabric leadership surfaced the root gap: no synthetic testing existed anywhere in the OSB request path, so every failure signal came from real developer traffic. I evaluated four alternatives — enhanced logging, provider self-monitoring, stricter ticketing SLAs, and canary testing without routing — and rejected all of them as either still-reactive or noise-generating at scale.
+The four OSB lifecycle operations that the platform manages on behalf of developers are:
 
-The solution was a two-layer system, since neither layer alone was sufficient:
+- **Create:** Provision a new service instance (e.g., allocate a new database)
+- **Bind:** Generate credentials and attach a service instance to an application
+- **Unbind:** Revoke credentials and detach a service from an application
+- **Delete:** Deprovision and permanently remove a service instance
 
-- **Canary test suite** — continuously exercises all four OSB operations against every provider's endpoint in every pool, on a 5-minute cadence, isolated from real developer traffic. At 20 providers × 6 pools × 4 operations, this generates ~138,000 automated test executions per day. Because the canary runs an identical test service alongside each provider's, it definitively separates platform-side faults from provider-side faults — if only one provider fails while everyone else passes, the fault is theirs.
-- **GTF Rules Engine integration** — rather than building a new alerting system, I integrated with JPMC's existing Rules Engine to route canary results with conditional logic: provider-scoped alerts only reach the responsible team, platform-side faults route only to platform engineering, a flap filter requires two consecutive failures before alerting, and recovery notifications close the loop automatically.
-- **Grafana dashboard** — a live health matrix serving both providers (their own 4×6 operation/pool grid) and Service Fabric leadership (all 20 providers at a glance), replacing what used to require an incident ticket or a call to assess.
+## Problem Statement
 
-## Outcome
+### The Fault Attribution Gap
 
-Mean time to detection dropped from 2–8 hours to ~5 minutes — failures are now caught within one canary cycle, at any hour, before a developer is affected. Mean time to resolution fell from 3–5 hours to ~60 minutes, driven almost entirely by eliminating the fault-attribution phase. Cross-team incident calls dropped from ~4/week to ~1/week, with the residual calls being genuine shared-infrastructure issues rather than routine attribution investigations. An estimated 650+ engineer-hours per year were reclaimed from triage, and for the first time, all 6 pools had live health coverage with an objective accountability view for OSB implementation quality across all 20 provider teams.
+At the scale of GTI's service marketplace, approximately 20 service provider teams exposing services across 6 pools, the four OSB lifecycle operations execute thousands of times per day. When any of these operations failed, the platform surfaced a generic error to the developer with no indication of the failure's origin. The critical diagnostic question, is this a platform issue or a service provider's OSB implementation issue, had no reliable answer.
+
+This ambiguity had cascading consequences across every incident:
+
+- **Cross-team war rooms:** Every failure required engineers from both the platform team and the affected service provider team to join a shared investigation. Neither team could independently rule out their own system as the fault source without significant log analysis across two codebases.
+- **Reactive detection only:** Failures were surfaced exclusively when a developer encountered them, raised a ticket, and the ticket was triaged. A service provider's Create operation could be broken for hours before anyone knew, and only during business hours, only for pools that developers happened to be actively using.
+- **Pool-specific failures were nearly invisible:** A service that worked correctly in na-4b but failed in na-4c appeared to developers as an intermittent, non-reproducible error. Without per-pool visibility, these failures were among the hardest class of issues to isolate and were frequently misdiagnosed.
+- **Alert fatigue from shared channels:** Platform error notifications went to shared channels where all teams received all alerts. Service provider teams could not distinguish failures in their own OSB implementation from failures in an entirely different provider's services, leading to notification fatigue and missed critical alerts.
+- **No leadership visibility:** The Service Fabric leadership team had no means to assess the health of the service marketplace as a whole, which providers were stable, which were degraded, and in which pools, without manually correlating incident tickets.
+
+<table>
+<thead>
+<tr><th>Metric</th><th>Before</th><th>After</th><th>Improvement</th></tr>
+</thead>
+<tbody>
+<tr><td>Mean time to detection (MTTD)</td><td>2–8 hours</td><td>~5 minutes</td><td>−97%</td></tr>
+<tr><td>Mean time to resolution (MTTR)</td><td>3–5 hours</td><td>~60 minutes</td><td>−75%</td></tr>
+<tr><td>Fault attribution time</td><td>1–3 hours</td><td>&lt;5 minutes</td><td>−97%</td></tr>
+<tr><td>Cross-team incidents / week</td><td>~4</td><td>~1</td><td>−75%</td></tr>
+<tr><td>Triage engineer-hours / year</td><td>~650 hrs</td><td>&lt;100 hrs</td><td>−85%</td></tr>
+<tr><td>Pools with live health coverage</td><td>0</td><td>6 of 6</td><td>Full coverage</td></tr>
+</tbody>
+</table>
+
+## Discovery & Stakeholder Alignment
+
+### How the Problem Was Identified
+
+The issue surfaced through a pattern I observed across multiple incident retrospectives on the GTI platform team: a disproportionate share of investigation time in OSB-related incidents was being spent not on fixing the failure, but on determining who owned it. Post-incident reviews repeatedly noted the same friction, platform engineers and service provider engineers spending 60–90 minutes in a shared call before even agreeing on fault domain.
+
+I ran a targeted discovery process with three stakeholder groups before designing any solution:
+
+- **Service provider team leads (sample of 8 across 20 providers):** To understand how they currently detected failures in their own OSB implementations. Almost universally, the answer was: they didn't, they found out when a platform team engineer pinged them in an incident channel.
+- **Gaia platform engineering:** To understand what telemetry and hooks existed in the OSB request path, what was logged, what was emittable, and where synthetic test traffic could be injected without affecting real developer workloads.
+- **Service Fabric leadership:** To understand what visibility they needed at a governance level. The ask was clear: a single view showing the health of every service provider's OSB implementation across every pool, updated continuously, not a retrospective report.
+
+### Key Insights from Discovery
+
+- No synthetic testing existed anywhere in the OSB request path. All failure signals were real developer traffic, meaning failures were only detected when developers hit them.
+- Service providers had no visibility into the health of their own OSB implementation on the Gaia platform. They were operating blind unless the platform team notified them of a failure.
+- The platform's existing logging captured OSB errors, but did not tag whether the error originated from the platform broker layer or the service provider's OSB endpoint, the exact distinction needed for fault attribution.
+- Alert routing was entirely undifferentiated: a shared channel received all OSB error notifications, making signal-to-noise ratios untenable for the 20 provider teams monitoring it.
+- Leadership's request for a service health view was not purely operational, it was also a governance requirement. With 20 internal teams exposing services, there was no accountability mechanism for OSB implementation quality before this.
+
+## Options Considered
+
+<table>
+<thead>
+<tr><th>Option</th><th>Approach</th><th>Why Rejected / Key Limitation</th></tr>
+</thead>
+<tbody>
+<tr><td>Enhanced platform logging</td><td>Extend existing OSB request logs to tag error source (platform vs. provider) and build dashboards on top</td><td>Logging captures real developer traffic only, still purely reactive. Does not enable proactive detection of a provider failure before a developer encounters it. Pool-specific failures remain invisible until a developer uses that pool.</td></tr>
+<tr><td>Service provider self-monitoring</td><td>Require each service provider to implement their own health check endpoint and reporting</td><td>Each team builds a different implementation; no standardized signal. Creates 20 separate monitoring setups with no unified view for leadership. Fails to test the actual OSB protocol path on the Gaia platform, a provider's own health check may pass while their OSB integration fails.</td></tr>
+<tr><td>Reactive ticketing SLA enforcement</td><td>Impose SLA response requirements on service providers when failures are reported via incident tickets</td><td>Does not reduce MTTD or eliminate the fault attribution problem, just adds process overhead on top of the same broken detection model. Developers still bear the cost of discovering failures first.</td></tr>
+<tr><td>Canary testing without alert routing</td><td>Deploy canary tests per pool but send all results to a single shared channel</td><td>Generates significant alert volume across 20 providers × 6 pools × 4 operations. Without conditional routing, alert fatigue replicates the existing problem. Service provider teams still cannot distinguish their own failures from others.</td></tr>
+</tbody>
+</table>
+
+The evaluation led to a two-layer design: canary testing to solve the detection and attribution problem, combined with the GTF Rules Engine to solve the alert routing and noise problem. Neither layer alone was sufficient, canary without routing creates noise; routing without canary has no synthetic signal to route.
+
+## Solution: OSB Observability Layer
+
+### Architecture Overview
+
+The observability layer was designed as two composable components sitting alongside the existing OSB request path, so that synthetic test traffic and real developer traffic remained fully isolated:
+
+<table>
+<thead>
+<tr><th>Layer</th><th>Component</th><th>Role</th></tr>
+</thead>
+<tbody>
+<tr><td>Layer 1</td><td>Canary Test Suite</td><td>Continuously executes all four OSB lifecycle operations (Create / Bind / Unbind / Delete) against each service provider's OSB endpoint in each pool. Runs on a 5-minute cadence, isolated from developer traffic. Results (pass / fail / latency) are published to a centralized telemetry collector after each cycle.</td></tr>
+<tr><td>Layer 2</td><td>GTF Rules Engine</td><td>Consumes the telemetry stream and applies conditional routing logic: each service provider team receives alerts only for failures scoped to their OSB endpoints. Platform-level failures, where the Gaia broker itself is the fault source, are routed exclusively to the platform engineering team. No team is alerted for a failure that is not in their domain.</td></tr>
+<tr><td>Layer 3</td><td>Grafana Dashboard</td><td>Visualizes canary results in real time: a grid of service providers × pools × operations, with red indicating a current failure and the specific failing operation highlighted. Serves as the live service health view for Service Fabric leadership, continuously reflecting the state of all 480 canary test flows.</td></tr>
+</tbody>
+</table>
+
+### Canary Test Suite Design
+
+Each canary test cycle exercises the full OSB lifecycle for a given service provider in a given pool in sequence: Create → Bind → Unbind → Delete. This matters because OSB failures are often operation-specific — a provider's Create may work while their Bind implementation is broken, or a pool-level network misconfiguration may cause Bind to fail in na-4c while succeeding in na-4b.
+
+- **Isolation:** Canary service instances are created in a dedicated test space, completely separate from developer-provisioned instances. Test traffic does not affect production service state.
+- **Coverage:** With 20 service providers, 6 pools, and 4 operations, each 5-minute canary cycle produces 480 test results. Over a 24-hour period, this is approximately 138,000 automated test executions continuously exercising the service fabric.
+- **Telemetry output:** Each test result publishes a structured event to the telemetry collector: service provider ID, pool, operation type, result (pass/fail), response time, and error detail if applicable. This structured payload is what the Rules Engine and Grafana consume.
+- **Fault attribution signal:** The canary definitively separates platform failures from provider failures. If the platform's own test service instance fails the same operation in the same pool at the same time as a provider's canary, the fault is platform-side. If only Provider X fails while all others pass, the fault is in Provider X's OSB implementation.
+
+### GTF Rules Engine Integration
+
+The GTF (Global Technology Foundation) Rules Engine was an existing internal framework maintained by a separate GTI team, designed for conditional event routing across the platform ecosystem. Rather than building a new alerting system, I identified the GTF Rules Engine as a capable fit for this use case, engaged the GTF team to understand the integration surface, and collaborated with them to design and implement the routing rules for the OSB observability layer.
+
+This was a deliberate build-vs-collaborate decision: the routing logic required by the observability layer, conditional fan-out of structured telemetry events to team-specific alert channels, was exactly the problem the GTF Rules Engine was designed to solve. Building a parallel capability would have duplicated existing infrastructure and introduced a maintenance burden without additional value.
+
+The routing rules implemented in the GTF layer:
+
+- **Provider-scoped routing:** Failures on Provider X's canary tests route to Provider X's designated alert channel and on-call contact only. Provider X does not receive alerts for Provider Y's failures.
+- **Platform fault routing:** If the canary's own test service fails in a pool while provider canaries also fail, the event is tagged as a platform-level failure and routed to the Gaia platform engineering team, not to the service providers, who are not at fault.
+- **Threshold-based suppression:** A single failed canary cycle does not trigger an alert, a flap filter requires two consecutive failures before routing an alert, reducing noise from transient network timeouts.
+- **Recovery notifications:** When a previously failing canary returns to passing, a recovery notification is routed to the same team that received the failure alert, closing the incident loop without manual confirmation.
+
+### Grafana Dashboard
+
+The Grafana dashboard serves two distinct audiences with a single data source:
+
+- **Operational use (service provider teams):** Each provider can see the real-time status of their four OSB operations across all six pools, a 4×6 health grid per provider. A red cell indicates a currently failing canary in that operation/pool combination, with the error detail accessible on drill-down.
+- **Governance use (Service Fabric leadership):** A summary view displays all 20 service providers as a single health matrix, giving leadership an immediate picture of marketplace stability without requiring an incident ticket or a call with the platform team. Historically problematic providers or pools are visible at a glance from trend data over time.
+
+<figure>
+  <img src="/images/projects/osb-observability-dashboard.png" alt="Grafana canary health dashboard showing the service provider health matrix, canary pass rate trend, and active GTF alert routing" />
+  <figcaption>Grafana Canary Health Dashboard — service provider health matrix, canary pass rate trend, and active GTF alert routing</figcaption>
+</figure>
+
+## Impact & Results
+
+### Detection, Attribution & Resolution
+
+- **MTTD: 2–8 hours → ~5 minutes.** Failures previously discovered only when developers hit them during business hours are now caught within one canary cycle, at any hour, in any pool — before a single developer is affected.
+- **MTTR: 3–5 hours → ~60 minutes.** The dominant driver was eliminating the fault attribution phase entirely. The canary result immediately establishes fault domain, platform or provider, removing the cross-team war room that preceded every fix. An estimated 650+ engineer-hours per year were reclaimed from triage alone.
+- **Cross-team incident calls: ~4/week → ~1/week.** Residual incidents are genuine shared-infrastructure cases that legitimately require both teams, not the routine attribution investigations that previously dominated on-call time.
+
+### Service Provider & Leadership Impact
+
+- Service providers gained self-service health visibility for their own OSB implementation for the first time, no longer dependent on the platform team to notify them of failures. Targeted GTF alert routing replaced shared-channel noise: each team receives only alerts scoped to their services, restoring signal-to-noise ratio and improving on-call responsiveness.
+- Pool-specific failures, previously the hardest class to diagnose, became immediately actionable. A provider whose Bind fails in na-4c but passes in na-4b receives a precisely scoped alert, enabling targeted investigation rather than a full OSB review.
+- Service Fabric leadership gained a live governance view of all 20 providers across 6 pools, the first time this existed in any form. Providers with recurring canary failures are identifiable in trend data, introducing an objective accountability layer for OSB implementation quality without requiring a manual ticket review.

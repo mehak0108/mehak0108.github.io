@@ -18,28 +18,166 @@ metrics:
     label: "Manual reviews needed"
   - value: "Audit-ready"
     label: "Compliance trail on record"
-coverImage: /images/projects/osb.png
-externalLinks:
-  - label: "View Full Case Study"
-    url: "https://docs.google.com/document/d/1nUVK5Lovn2UabENfdrCCwEabZOXYR743/edit?usp=sharing&ouid=100358671322377485595&rtpof=true&sd=true"
-
 ---
 
-## Problem
+## Executive Summary
 
-As service providers onboarded to cloud marketplace a critical gap emerged: there was no enforced standard for how each provider implemented the Open Service Broker (OSB) API. Providers built their own OSB implementations independently. The platform had no reliable way to interpret non-standard responses, handle edge cases consistently, or demonstrate pre-onboarding validation to internal audit teams.
+As service providers began onboarding to cloud platform, a critical gap emerged: there was no enforced standard for how each provider implemented the Open Service Broker (OSB) API, the protocol Cloud Foundry uses to manage every service lifecycle. Without a contract, the platform had no reliable way to interpret provider responses, handle errors consistently, or demonstrate pre-onboarding validation to internal audit teams.
 
-This created three compounding risks: unpredictable runtime failures when Cloud Foundry hit a malformed provider response, orphaned resources when unbind/delete flows were incorrectly implemented, and a compliance gap — no documented evidence that any service had been validated before going live on a platform handling sensitive financial data.
+I designed and built an asynchronous certification suite that every service provider must pass before their service is listed on the marketplace. The suite tests the full OSB lifecycle, create, bind, unbind, delete, including error handling and edge cases, and produces a structured pass/fail report with visual output. It functions as the marketplace's quality gate: providers self-serve their way to compliance, and the platform team gets a documented certification trail for every listed service.
 
-## Solution
+## Background & Context
 
-I designed the certification suite as a quality gate. A service cannot be listed on the marketplace until it passes all 20 tests. The core design decisions:
+Gaia Cloud Platform is JP Morgan's internal service marketplace, allowing developer teams to discover and provision infrastructure services across Cloud Foundry and Kubernetes. Cloud Foundry communicates with every listed service through the Open Service Broker API, a standard protocol covering the complete service lifecycle: create instance, bind to app, unbind, and delete.
 
-- **Async execution** — tests run in the background without blocking the onboarding UI; providers get a link to a live report that updates as each test completes
-- **Full lifecycle coverage** — tests span all four OSB operations (create, bind, unbind, delete) including error codes, malformed responses, timeout behavior, retry handling, and orphan prevention on delete
-- **Self-serve report** — per-test pass/fail status with structured failure descriptions lets providers diagnose and fix issues without contacting the platform team
-- **Compliance-aligned criteria** — test cases extend beyond the OSB spec to cover JP Morgan's enterprise standards for error handling and resource cleanup, producing a timestamped certification record for every listed service
+<figure>
+  <img src="/images/projects/osb-cert-api-overview.png" alt="Open Service Broker API overview: create, bind, unbind, and delete a service, connecting to service broker examples like Netflix, MySQL, and Redis" />
+  <figcaption>The Open Service Broker API: a standard contract between Cloud Foundry and every service it provisions</figcaption>
+</figure>
 
-## Outcome
+The OSB spec defines the contract in theory. In practice, each service provider builds their own OSB implementation independently. As the number of providers onboarding to Gaia Portal grew, it became clear that the platform was operating on a faulty assumption: that all OSB implementations were equivalent. They were not.
 
-Provider time-to-list dropped from 3–4 months to ~2 weeks, an **85% reduction**, as the async certification suite replaced a manual review cycle with structured, self-serve feedback. Each new infrastructure service became available to consuming teams ~12 weeks earlier per onboarding cycle. Post-onboarding support escalations caused by inconsistent OSB behavior dropped significantly, and every listed service now carries a timestamped certification record, shifting compliance posture from reactive to proactive before any service reaches the platform.
+**Key Stakeholders**
+
+- **Service Providers** — teams building and listing infrastructure services on Gaia Portal
+- **Platform Team (Cloud Foundry / GTI)** — consuming OSB APIs at runtime on every provisioning operation
+- **Security & Compliance** — requiring documented pre-onboarding validation for all services handling financial data
+- **Developer Consumers** — downstream teams whose provisioning reliability depends on well-behaved OSB implementations
+
+Reference: [openservicebrokerapi.org](https://www.openservicebrokerapi.org/)
+
+## Problem Statement
+
+The OSB spec defines the interface, but does not enforce it. Service providers could implement it however they chose, and Cloud Foundry had no mechanism to handle that variation without custom-coding logic for each provider, which does not scale across an enterprise platform.
+
+**Three Concrete Risks**
+
+- **Unpredictable response formats** — A provider returning a non-standard error code or malformed response body causes the platform to fail silently or throw unhandled exceptions. Developers get no actionable error; the platform team gets an escalation.
+- **Unhandled edge cases** — Without validating timeout behavior, retry handling, or delete/unbind correctness, services could leave orphaned bindings after termination, resources allocated but never cleaned up, creating data and cost exposure.
+- **Compliance gap** — At JP Morgan, services on the platform have the potential to access or process sensitive financial data. Onboarding an unvalidated service creates an audit gap: no documented evidence that the service behaved correctly across all lifecycle operations before going live.
+
+**Problem Framing**
+
+- **User (Service Provider):** "I've built my OSB implementation. How do I list my service on the marketplace?"
+- **Current experience:** Submit details, wait for manual review, get ad-hoc feedback from the platform team, iterate without visibility into what specifically failed.
+- **Desired experience:** Submit details, get a link to an automated report, see exactly which tests failed and why, fix and resubmit, no platform team involvement needed.
+- **Business impact:** Inconsistent OSB behavior causes runtime provisioning failures for consuming teams, creates compliance exposure, and overloads the platform team with reactive debugging.
+
+## Solution — Async OSB Certification Suite
+
+The certification suite is an asynchronous test harness integrated into the Gaia Portal provider onboarding flow. It hits the service provider's OSB API across all lifecycle operations, validates responses against the OSB spec and JP Morgan's enterprise standards, and generates a structured pass/fail report. A service cannot be listed on the marketplace until it passes.
+
+**Key Design Decisions**
+
+- **Async execution** — Tests run in the background without blocking the UI. The provider receives a confirmation with a link to a live report, which updates as tests complete.
+- **Full lifecycle coverage** — Tests span all four OSB operations (create, bind, unbind, delete), not just the happy path, mirroring what CF will do at runtime.
+- **Edge case validation** — Beyond standard flows, tests cover non-standard error codes, malformed error messages, timeout handling, and retry behavior.
+- **Self-serve report** — Pass/fail status per test with structured failure descriptions lets providers debug without contacting the platform team.
+- **Pie chart summary** — Visual pass/fail distribution gives an at-a-glance health signal before providers dive into individual results.
+
+**Test Coverage**
+
+<table>
+<thead>
+<tr><th>Lifecycle Operation</th><th>Test Cases Covered</th></tr>
+</thead>
+<tbody>
+<tr><td>Create Instance</td><td>Successful provisioning response, correct HTTP status, required response fields present, error code format on failure</td></tr>
+<tr><td>Bind to Application</td><td>Binding response structure, credential format, error handling on duplicate bind, timeout behavior</td></tr>
+<tr><td>Unbind</td><td>Clean unbind response, correct status on non-existent binding, idempotency</td></tr>
+<tr><td>Delete Instance</td><td>Successful deletion response, orphan prevention on non-existent instance, async delete handling</td></tr>
+<tr><td>Cross-cutting</td><td>Error message format compliance, retry behavior under load, response time within acceptable bounds</td></tr>
+</tbody>
+</table>
+
+**Report Preview**
+
+The screenshot below shows the certification report generated after a provider submits their OSB implementation. The report updates in real time as tests complete, showing per-test pass/fail status, operation-level grouping, and a failure detail panel for any tests that did not pass.
+
+<figure>
+  <img src="/images/projects/osb-cert-report.png" alt="OSB certification report showing 17 tests passed, 3 failed, an 85% pass rate, and a per-test results table grouped by operation" />
+  <figcaption>Figure 1 — Certification report: stat summary, per-test results table, and failure detail panel with remediation notes</figcaption>
+</figure>
+
+## The Onboarding Flow
+
+The certification suite runs automatically on every provider submission — no manual platform team involvement required. The diagram below shows the end-to-end flow from submission to marketplace listing.
+
+<figure>
+  <img src="/images/projects/osb-cert-onboarding-flow.png" alt="Service provider onboarding flow: arrive, input, submit, run, report, visual, iterate, listed, with a failure loop-back from iterate to submit" />
+  <figcaption>Figure 2 — End-to-end provider onboarding flow: from UI submission through async certification to marketplace listing</figcaption>
+</figure>
+
+<table>
+<thead>
+<tr><th>Step</th><th>Action</th><th>Owner</th></tr>
+</thead>
+<tbody>
+<tr><td>1</td><td>Provider opens the marketplace onboarding UI</td><td>Service Provider</td></tr>
+<tr><td>2</td><td>Enters plan name, OSB application endpoint, and plans catalog configuration</td><td>Service Provider</td></tr>
+<tr><td>3</td><td>Clicks Submit — platform returns 'Request received' with a link to the certification report</td><td>UI Platform</td></tr>
+<tr><td>4</td><td>Backend asynchronously runs 20 tests against the provider's OSB API across all lifecycle operations</td><td>Platform (Async Engine)</td></tr>
+<tr><td>5</td><td>Report updates in real time as each test completes — pass/fail status with failure description</td><td>Platform</td></tr>
+<tr><td>6</td><td>Pie chart at the top of the report shows overall pass/fail distribution at a glance</td><td>Platform</td></tr>
+<tr><td>7</td><td>Provider uses structured failure detail to debug and resubmit — no platform team contact required</td><td>Service Provider</td></tr>
+<tr><td>8</td><td>Service is cleared and listed on marketplace only after passing all tests</td><td>Platform</td></tr>
+</tbody>
+</table>
+
+## My Role & Key Contributions
+
+- **Designed the test suite structure** — determined which OSB operations and edge cases to cover, and defined pass/fail criteria aligned with both the OSB spec and JP Morgan's internal compliance requirements
+- **Built the async test execution engine** — implemented the backend harness that runs tests against provider OSB endpoints without blocking the onboarding UI
+- **Designed the report data model** — per-test status tracking, failure reason capture, and aggregate pass/fail counts feeding the visual summary
+- **Implemented the pie chart visualization** — pass/fail distribution rendered in the report for at-a-glance provider feedback
+- **Defined compliance-aligned test criteria** — extended beyond the OSB spec to cover JP Morgan's enterprise standards for error handling, timeout behavior, and resource cleanup
+
+## Impact & Metrics
+
+<table>
+<thead>
+<tr><th>Metric</th><th>Before</th><th>After</th><th>Improvement</th></tr>
+</thead>
+<tbody>
+<tr><td>OSB Contract Compliance</td><td>No enforced standard; implementations varied by provider</td><td>100% of listed services passed the full certification suite</td><td>Standardized marketplace</td></tr>
+<tr><td>Service Provider Time-to-List</td><td>3–4 months — manual review cycle with no structured feedback</td><td>~2 weeks — async certification suite with self-serve report</td><td>~85% faster</td></tr>
+<tr><td>Downstream Engineering Access</td><td>Consuming teams waited 3–4 months for each new service to go live</td><td>New infrastructure services available ~12 weeks earlier per onboarding</td><td>12 weeks reclaimed per provider</td></tr>
+<tr><td>Post-Onboarding Support Issues</td><td>High — inconsistent OSB behavior surfaced as runtime failures after listing</td><td>Significantly reduced — issues caught pre-listing by the suite</td><td>Shifted left</td></tr>
+<tr><td>Provider Onboarding Feedback Loop</td><td>Manual review by platform team; no structured feedback</td><td>Self-serve via structured per-test report, no ticket required</td><td>Fully self-serve</td></tr>
+<tr><td>Compliance Audit Readiness</td><td>No documented pre-onboarding validation trail</td><td>Timestamped certification report on record for every listed service</td><td>Audit-ready</td></tr>
+</tbody>
+</table>
+
+## Compliance Angle
+
+At JP Morgan, this was not purely an engineering quality control decision. Services listed on cloud marketplace provision and manage resources that may access or process sensitive financial data. The absence of a pre-onboarding validation process created regulatory and audit exposure across three dimensions:
+
+<table>
+<thead>
+<tr><th>Risk</th><th>Exposure Without Suite</th><th>How the Suite Mitigates It</th></tr>
+</thead>
+<tbody>
+<tr><td>No audit trail</td><td>No documented evidence that a service was tested before going live — creates gap for internal audit and regulatory review</td><td>Every listed service has a timestamped, structured certification report on record showing which tests passed, failed, and when the service was cleared</td></tr>
+<tr><td>Resource leakage risk</td><td>Unvalidated unbind/delete flows could leave data resources allocated after service termination, a data governance and cost control issue</td><td>The suite explicitly tests delete and unbind correctness, including non-existent instance handling, before the service is permitted on the platform</td></tr>
+<tr><td>Non-standard error handling</td><td>Unpredictable error responses from provider OSBs can mask failures in regulated provisioning workflows, creating reporting blind spots</td><td>Test cases cover error code format, error message structure, and timeout behavior, enforcing a consistent, interpretable error contract across all providers</td></tr>
+</tbody>
+</table>
+
+The certification suite shifted the compliance posture from reactive (discovering non-compliant behavior after listing) to proactive (enforcing a documented gate before any service reaches the marketplace). Every service on cloud marketplace has earned its listing.
+
+## Product Thinking Framework
+
+Though implemented as an engineering workstream, each decision reflected a product mindset — understanding provider and platform team needs, making explicit trade-offs, and designing for self-serve scale.
+
+<table>
+<thead>
+<tr><th>Framework Stage</th><th>Application to This Work</th></tr>
+</thead>
+<tbody>
+<tr><td>DISCOVER</td><td>Identified that the root cause of post-onboarding failures was not provider negligence but the absence of an enforced contract. Mapped the problem to three user groups: providers (no feedback loop), platform team (reactive debugging), and compliance (no audit trail).</td></tr>
+<tr><td>DEFINE</td><td>Framed the solution as a quality gate with two success criteria: (1) providers can self-diagnose and fix failures without platform team involvement, (2) every listed service has a documented certification trail.</td></tr>
+<tr><td>DESIGN</td><td>Chose async execution over synchronous, an explicit trade-off favouring provider UX (no long-running UI wait) over implementation simplicity. Designed the report as the primary product surface, not just a log output.</td></tr>
+<tr><td>DELIVER</td><td>Integrated the suite into the existing onboarding UI without requiring providers to adopt new tooling. Tests run automatically on every submission.</td></tr>
+<tr><td>MEASURE</td><td>Defined success as: reduction in post-onboarding support escalations, provider ability to self-serve report remediation, and 100% of marketplace listings carrying a certification record.</td></tr>
+</tbody>
+</table>
