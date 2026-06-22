@@ -23,6 +23,25 @@ export const projects: Project[] = [
     { value: '1 weekend', label: 'Build time' },
   ],
 },
+{
+  title: 'Kindred: Matching Therapists and Patients on Fit',
+  company: 'UW Foster',
+  description: 'Co-founded an AI-matched therapist discovery platform after 12 structured therapist interviews surfaced a universal fit-mismatch problem, then built and shipped an MVP that replaces directory scrolling with a conversational AI match.',
+  tags: ['AI Matching', 'Customer Discovery', 'MVP Development', 'Marketplace Strategy'],
+  category: 'ai',
+  link: 'https://findmykindred.app/',
+  type: 'external',
+  featured: false,
+  metrics: [
+    { value: '12', label: 'Structured therapist interviews conducted' },
+    { value: '8/10', label: 'Independently using the same unpaid workaround' },
+    { value: '$110B', label: 'U.S. mental health market' },
+    { value: 'Winner', label: 'eBay Marketplace Award, Dempsey Startup Competition' },
+  ],
+  externalLinks: [
+    { label: 'Business Summary', url: 'https://drive.google.com/file/d/1C7B0C4IVpTvb79p0ilgU5XBiPJW-Ue8Y/view?usp=sharing' },
+  ],
+},
   {
   title: 'From Queue to Checkout in 20 Seconds',
   company: 'Mishipay',

@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { projects } from '@/config/projects';
 
 const aiProjects = projects.filter(p => Array.isArray(p.category) ? p.category.includes('ai') : p.category === 'ai');
@@ -16,8 +16,19 @@ function SparklesIcon() {
 }
 
 function AICard({ project }: { project: typeof projects[0] }) {
-  const inner = (
+  const router = useRouter();
+
+  const navigate = () => {
+    if (project.type === 'internal') {
+      router.push(project.link);
+    } else {
+      window.open(project.link, '_blank', 'noopener,noreferrer');
+    }
+  };
+
+  return (
     <div
+      onClick={navigate}
       style={{ background: 'var(--color-heading)', border: '0.5px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '28px', display: 'flex', flexDirection: 'column', height: '100%', cursor: 'pointer', transition: 'transform 300ms, box-shadow 300ms' }}
       onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 8px 28px rgba(43,108,176,0.18)'; }}
       onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
@@ -46,25 +57,34 @@ function AICard({ project }: { project: typeof projects[0] }) {
         </div>
       )}
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
           {project.tags.slice(0, 2).map(tag => (
             <span key={tag} style={{ fontSize: '11px', color: 'rgba(255,255,255,0.35)', background: 'rgba(255,255,255,0.05)', borderRadius: '6px', padding: '4px 10px' }}>
               {tag}
             </span>
           ))}
         </div>
-        <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-accent)', whiteSpace: 'nowrap' }}>
-          {project.type === 'external' ? 'View ↗' : 'View →'}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          {project.externalLinks?.map(link => (
+            <a
+              key={link.url}
+              href={link.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={e => e.stopPropagation()}
+              style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-accent)', textDecoration: 'none', border: '1px solid var(--color-accent)', borderRadius: '6px', padding: '4px 10px', whiteSpace: 'nowrap' }}
+            >
+              {link.label} ↗
+            </a>
+          ))}
+          <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-accent)', whiteSpace: 'nowrap' }}>
+            {project.type === 'external' ? 'View ↗' : 'View →'}
+          </span>
+        </div>
       </div>
     </div>
   );
-
-  if (project.type === 'internal') {
-    return <Link href={project.link} style={{ textDecoration: 'none', display: 'block' }}>{inner}</Link>;
-  }
-  return <a href={project.link} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', display: 'block' }}>{inner}</a>;
 }
 
 export function AIAgents() {
