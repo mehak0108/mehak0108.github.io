@@ -16,34 +16,180 @@ metrics:
     label: "Charges correctly allocated"
   - value: "80+"
     label: "Teams onboarded"
-coverImage: /images/projects/jrn.png
-externalLinks:
-  - label: "View Full Case Study"
-    url: "https://docs.google.com/document/d/1Ivk5z2qm_Vw06c_dHZNcTgQ5K4QrUdLt/edit?usp=sharing&ouid=100358671322377485595&rtpof=true&sd=true"
 ---
 
-## Problem
+## Problem Statement
 
-GTI's internal chargeback process depended on a critical assumption: that every workload on JPMC's private cloud platform (Gaia CF and GKP) could be reliably linked to an owning line of business, division, and team. In practice, ~40% of workloads carried no structured ownership metadata — names like "payment-svc" or "test-app-1" gave billing no signal about which business unit had provisioned them.
+### Organizational Context
 
-The fallout reached four stakeholder groups: Finance was manually reconciling workload lists against ServiceNow tickets, burning 3–4 analysts and 22 business days per billing cycle. Division finance leads were fielding challenged cost allocations. Platform engineering had no reliable inventory of what was running or who owned it. Security Operations couldn't quickly identify an owning team during an incident.
+JP Morgan Chase's Global Technology Infrastructure (GTI) line of business operates JPMC's internal private cloud platforms, Gaia Cloud Foundry (CF) and the Gaia Kubernetes Platform (GKP), which together serve as the primary deployment targets for application workloads across all major business lines: Corporate & Investment Bank (CIB), Commercial Banking, Asset & Wealth Management, Consumer & Community Banking, and Enterprise Technology. At the time, GTI supported over 80 independent technology teams deploying and running an estimated 12,000+ active workloads (CF applications, GKP deployments, and associated services) across these platforms.
 
-## Solution
+Platform resource consumption, compute (RAM and vCPU allocations), storage, and network bandwidth, was metered by the Gaia platform and invoiced internally to GTI's Finance business partner on a monthly cycle. GTI Finance was then responsible for allocating those platform costs back to the correct LOB division through the firm's internal chargeback process.
 
-I led discovery across four stakeholder groups — Finance, 14 GTI tech leads, platform engineering, and solution architects — before evaluating five alternative approaches (CF org/space remapping, namespace isolation, optional labels, CMDB registration, a custom metadata service). All five either relied on voluntary compliance that had already failed, or required disruptive platform restructuring.
+### The Attribution Breakdown
 
-The solution was JP Morgan Resource Naming (JRN) — inspired by AWS's ARN — a self-describing, platform-agnostic, machine-parseable naming schema enforced as a hard deployment gate, not a recommendation:
+The internal chargeback process depended on a critical assumption: that each workload on Gaia could be reliably linked to an owning LOB, division, and team. In practice, this assumption did not hold. Across the GTI estate, approximately 40% of workloads, running live on Gaia CF and GKP, carried no structured ownership metadata. Application names like "payment-svc", "data-processor-v2", or "test-app-1" were common, containing no reliable signal about which business unit had provisioned the workload.
+
+The consequences were significant and affected multiple stakeholder groups:
+
+- GTI Finance and billing teams were manually cross-referencing workload lists against ServiceNow provisioning tickets and team rosters, a reconciliation process that required 3–4 analysts and averaged 22 business days per monthly billing cycle.
+- Division finance leads were receiving cost allocations that were routinely challenged, creating friction in month-end close and escalations to GTI leadership.
+- GTI platform engineering had no reliable inventory of what was running on Gaia, who owned it, or whether it was production-critical, a risk exposure for platform capacity planning and incident response.
+- Security Operations could not quickly identify the owning team for a workload exhibiting anomalous behavior, increasing mean-time-to-triage for platform-level security incidents.
+
+<table>
+<thead>
+<tr><th>Metric</th><th>Before JRN</th><th>After JRN</th><th>Improvement</th></tr>
+</thead>
+<tbody>
+<tr><td>Workload attribution coverage</td><td>61%</td><td>97%</td><td>+36 pp</td></tr>
+<tr><td>Billing cycle resolution time</td><td>22 business days</td><td>4 business days</td><td>−82%</td></tr>
+<tr><td>Unallocated platform charges / yr</td><td>~$3.8M</td><td>&lt;$250K residual</td><td>−93%</td></tr>
+<tr><td>Manual reconciliation FTE effort</td><td>~3.5 FTE / cycle</td><td>&lt;0.5 FTE / cycle</td><td>−86%</td></tr>
+<tr><td>Billing disputes per quarter</td><td>~52 disputes</td><td>~7 disputes</td><td>−87%</td></tr>
+</tbody>
+</table>
+
+## Discovery & Stakeholder Alignment
+
+### How the Problem Was Surfaced
+
+The issue was escalated by GTI Finance following a quarterly close review in which over $950K in Gaia platform charges could not be automatically attributed to a cost center. I was brought in as the technical representative from the GTI platform team to lead root cause analysis and solution design.
+
+I conducted structured discovery interviews across four stakeholder groups to map the full problem space before proposing any solution:
+
+- **Finance & Billing teams** — to understand exactly what metadata they needed in order to execute chargeback: the minimum viable fields, acceptable formats, and what a machine-readable output would look like.
+- **GTI Tech Leads (sample of 14 teams across 4 divisions)** — to understand current provisioning behaviors on Gaia CF and GKP, what naming conventions existed (if any), and what constraints any solution would face in their CI/CD pipelines.
+- **Gaia Platform Engineering** — to understand what enforcement hooks existed at the CF API layer and within GKP's admission control pipeline, and what metadata was already captured at deploy time.
+- **Internal Solution Architects** — to evaluate feasibility of technical approaches and identify dependencies on ServiceNow, the internal CMDB, and existing CI/CD tooling.
+
+### Key Insights from Discovery
+
+- No consistent naming convention existed across GTI teams. Each team used ad-hoc names for CF apps and GKP workloads with no shared schema.
+- CF org and space structures were used for environment isolation (prod, staging, dev) but did not map reliably to billing divisions, a single CF space frequently contained apps owned by multiple cost centers.
+- GKP namespaces were similarly used as operational constructs (one namespace per team or service family), not financial ones, and namespace names did not encode division or LOB.
+- Kubernetes labels were applied inconsistently: roughly 25% of GKP workloads had a `team` label, but with no agreed schema, values like `team-a`, `payments`, and `CIB-Payments` all appeared in the same platform.
+- Finance's minimum data requirement for chargeback was: LOB identifier, division, and owning team, embedded in a machine-parseable, programmatically extractable format.
+- The Gaia platform already emitted per-workload consumption metrics (RAM allocation, vCPU hours, storage); the gap was purely in linking those metrics to an owner.
+
+## Options Considered
+
+Before designing a new standard, I evaluated these alternative approaches with the solution architect team against three criteria: coverage of existing workloads, enforcement reliability, and implementation timeline.
+
+<table>
+<thead>
+<tr><th>Option</th><th>Approach</th><th>Why Rejected / Key Limitation</th></tr>
+</thead>
+<tbody>
+<tr><td>CF Org / Space model</td><td>Map each CF org to a division and each space to a team; billing rolls up from space to org</td><td>CF orgs and spaces are operational constructs shared across teams. Restructuring ~400 existing CF orgs and spaces to match the financial hierarchy would require a multi-quarter migration with significant application downtime risk.</td></tr>
+<tr><td>GKP Namespace isolation</td><td>Mandate one namespace per billing division; consumption aggregated at namespace level</td><td>Namespaces are used as operational boundaries (per service, per environment). Re-partitioning existing namespaces would break service discovery, RBAC, and network policies for 80+ teams. Not addressable retroactively.</td></tr>
+<tr><td>Kubernetes labels / CF env vars</td><td>Mandate structured metadata labels on all GKP workloads and environment variables on CF apps</td><td>Labels and env vars are optional by default. Discovery showed 75% non-compliance on GKP already. No native enforcement mechanism prevents a deployment without them; retroactive enforcement requires a platform-level gate.</td></tr>
+<tr><td>CMDB / ServiceNow ITSM</td><td>Register all Gaia workloads as configuration items in ServiceNow; billing maps to CI owner field</td><td>ServiceNow CMDB goes stale rapidly in dynamic environments, apps deploy and tear down via automated pipelines with no human ticket raised. Estimated CMDB lag of 2–4 weeks. Manual reconciliation does not scale at GTI's workload velocity.</td></tr>
+<tr><td>Custom metadata service (sidecar API)</td><td>Require teams to register workloads in a new internal ownership registry at deploy time</td><td>Introduces a new external dependency in every deployment pipeline for 80+ teams. High adoption friction. Registry can fall out of sync with actual deployed state. Adds latency and failure modes to CI/CD pipelines.</td></tr>
+</tbody>
+</table>
+
+The evaluation showed that all the alternatives either failed to address the existing unattributed workload inventory, relied on voluntary team compliance (which had already failed), or required disruptive structural changes to the Gaia platform itself. The gap pointed to a different class of solution: a naming-based standard where ownership metadata is embedded in the workload name itself at provisioning time, parseable by the billing pipeline without any additional integrations, and enforceable natively through existing platform hooks.
+
+## Solution: JP Morgan Resource Naming (JRN)
+
+### Design Principles
+
+Inspired by Amazon Resource Naming (ARN), the structured naming convention AWS uses to uniquely identify all resources in its ecosystem, JRN was designed for JPMC's private cloud context around four principles:
+
+- **Self-describing:** the workload name alone encodes LOB, division, team, environment, and resource type, no lookup in any external system required.
+- **Platform-agnostic:** the same schema works across Gaia Cloud Foundry apps, GKP deployments, and any future internal or external cloud platform JPMC adopts.
+- **Machine-parseable:** a fixed delimiter and fixed-position segment structure enables regex-based extraction in billing pipelines, monitoring dashboards, and policy engines.
+- **Enforced at the platform gate:** not a recommendation, a hard blocker. Non-compliant workloads cannot be deployed.
+
+### The JRN Schema
+
+After three design review cycles with the solution architect team and validation sessions with Finance on the required chargeback fields, the following schema was finalized:
 
 ```
 jpmc:<lob>:<division>:<team>:<environment>:<datacenter>:<platform>:<workload-id>
 ```
 
-Enforcement ran through two platform-level gates: a CF API pre-provisioning hook that rejects non-compliant `cf push` commands, and a Kubernetes `ValidatingAdmissionWebhook` that rejects non-conforming Deployments, StatefulSets, CronJobs, and DaemonSets — plus a CI/CD linting step catching violations even earlier, at the pull-request stage.
+CF example: `jpmc:gti:cib:payments-platform:prod:ny4:cf-app:trade-confirm-svc`
+GKP example: `jpmc:gti:cib:payments-platform:prod:ny4:k8s-deploy:trade-confirm-worker`
 
-For the ~4,800 already-deployed non-compliant workloads, I ran a parallel retroactive migration: an automated inventory script cross-referenced ServiceNow records to infer ownership, teams confirmed via a pre-populated spreadsheet, and validated workloads were renamed programmatically. Rollout was phased across 12 weeks — pilot, warn-only expansion, then full enforcement.
+Rationale for each schema segment:
 
-## Outcome
+- **`<lob>`** — Line of Business (e.g., gti, cib, ccb). Top-level allocation unit matching JPMC's financial reporting hierarchy.
+- **`<division>`** — Business division within the LOB (e.g., cib, awm, commercial-banking). The primary chargeback unit requested by Finance for internal billing.
+- **`<team>`** — Provisioning tech team (e.g., payments-platform, market-data-infra). Enables granular cost visibility per team and immediate ownership identification for security triage.
+- **`<environment>`** — prod, uat, staging, dev, sandbox. Allows platform policies to enforce environment-specific controls (e.g., prevent sandbox workloads from being tagged as prod to avoid high-availability guarantees).
+- **`<datacenter>`** — Internal datacenter code (e.g., ny4, ny5, de2, tx1). Supports data residency compliance tracking and capacity planning by physical location.
+- **`<platform>`** — cf-app, cf-service, k8s-deploy, k8s-statefulset, k8s-cronjob, etc. Enables resource-class cost breakdowns and platform-specific operational tooling.
+- **`<workload-id>`** — Human-readable workload name (no spaces). Provides operational identity and retains team-defined naming conventions within the JRN structure.
 
-Workload attribution coverage rose from 61% to 97%. Billing cycle resolution time dropped from 22 business days to 4 — an 82% reduction. $3.8M in previously unattributed annual platform charges was correctly allocated, with residual unallocated charges falling 93% to under $250K. Billing disputes per quarter fell from ~52 to ~7. Manual reconciliation effort dropped from ~3.5 FTE per cycle to under 0.5 FTE.
+### Data Storage & Downstream Integration
 
-The migration also surfaced 120 ownerless legacy workloads, which were decommissioned — recovering ~$180K/year in idle capacity. JRN's platform-agnostic schema later extended to JPMC's public cloud workloads without redesign, and its CI linting module was adopted by teams beyond GTI as part of the firm's platform engineering golden path.
+The JRN itself required no separate registry or database, the resource name is the JRN, stored natively in Gaia Cloud Foundry's internal API and GKP's etcd store alongside every running workload. The billing pipeline queried these platform APIs on a nightly schedule, extracted all active resource names, and applied a regex parser to pull out the LOB, division, team, environment, and datacenter segments for cost attribution.
+
+Two lightweight auxiliary stores were maintained alongside:
+
+- **JRN Reference Table** — a curated list of approved segment values (valid LOB codes, division identifiers, team slugs), maintained by the GTI Architecture Council. The CF API hook and GKP admission webhook validated incoming resource names against this table at deploy time, preventing typos or unrecognized team identifiers from silently slipping through into the billing pipeline.
+- **Team-to-Cost-Center Mapping** — Finance's chargeback system operates on internal cost center codes (e.g., CC-47821), not team slugs. A mapping table linking JRN team identifiers to their corresponding cost center codes was maintained in ServiceNow, giving the billing pipeline a reliable key to translate parsed JRN segments into the financial hierarchy without any manual intervention.
+
+### Platform Enforcement
+
+JRN compliance was enforced through two complementary platform-level gates — one for each Gaia platform, so that a non-compliant workload name causes a hard deployment failure rather than a policy warning:
+
+- **Gaia Cloud Foundry — CF API pre-provisioning hook:** A validation hook was implemented at the CF API layer that intercepts every `cf push` command. Before the application is staged, the hook validates the application name against the JRN regex. A non-matching name returns an error with the expected format and rejects the push. This was implemented in collaboration with the Gaia CF platform engineering team and deployed as a CF API plugin at the foundation level, requiring no changes to team-level `cf push` workflows beyond the name format.
+- **Gaia Kubernetes Platform — Validating Admission Webhook:** A `ValidatingAdmissionWebhook` was deployed to the GKP cluster that intercepts all Deployment, StatefulSet, CronJob, and DaemonSet creation requests. The webhook validates the resource's `metadata.name` field against the JRN regex and rejects any resource that does not conform. The webhook was registered at the cluster level by the GKP platform team, with zero changes required to individual team Helm charts beyond the workload name.
+- **CI/CD pipeline linting (defense-in-depth):** A JRN linting step was added to JPMC's shared CI pipeline templates (used by 60+ teams as the base for their pipelines). This catches non-compliant names earlier in the development cycle, at the pull request stage, before a deployment is even attempted, reducing friction caused by late-stage rejections.
+
+### Retroactive Migration
+
+The enforcement gates addressed net-new workloads, but approximately 4,800 existing workloads on Gaia were already deployed with non-compliant names. A separate migration workstream was run in parallel:
+
+- An automated inventory script queried the Gaia CF API and GKP API to extract all running workloads and their current names, cross-referenced against the ServiceNow provisioning records and team rosters to infer likely ownership.
+- A pre-populated migration spreadsheet was generated for each GTI tech team, showing their inferred workload ownership and requesting confirmation or correction. Teams had 3 weeks to validate.
+- Validated workloads were renamed programmatically using the CF API (`cf rename`) and Kubernetes resource patching scripts. For CF apps, this triggered an automatic restage; for GKP, workloads were redeployed via the team's CI pipeline with the new name.
+- At the end of the migration, 4,680 of 4,800 existing workloads (97.5%) were successfully migrated. The remaining 120 were legacy, ownerless workloads that were subsequently decommissioned after a 30-day notice period — an unanticipated side benefit of the exercise.
+
+### Phased Rollout
+
+<table>
+<thead>
+<tr><th>Phase</th><th>Scope</th><th>Activities</th></tr>
+</thead>
+<tbody>
+<tr><td>Phase 1 (Wks 1–3)</td><td>Pilot: 2 divisions, 9 teams</td><td>JRN schema finalized with Finance sign-off. CF hook and GKP webhook built and tested in non-prod Gaia foundations. Pilot teams onboarded; billing pipeline parsing logic validated end-to-end.</td></tr>
+<tr><td>Phase 2 (Wks 4–8)</td><td>Expansion: all 6 divisions, new workloads only</td><td>Enforcement hooks deployed to all Gaia CF and GKP production foundations in warn-only mode. Shared CI linting module published. Developer documentation and onboarding guide published on internal wiki. Office hours with GTI tech leads.</td></tr>
+<tr><td>Phase 3 (Wks 9–12)</td><td>Full enforcement + retroactive migration</td><td>Enforcement gates switched to block mode. Retroactive migration of 4,800 existing workloads executed. GTI leadership cost attribution dashboard published. Governance working group (JRN RFC process) established.</td></tr>
+</tbody>
+</table>
+
+<figure>
+  <img src="/images/projects/jrn-cost-dashboard.png" alt="GTI Gaia platform cost attribution dashboard showing team-level resource allocation and monthly charges by division" />
+  <figcaption>GTI Gaia Platform Cost Attribution Dashboard — team-level resource allocation and monthly charges</figcaption>
+</figure>
+
+## Impact & Results
+
+### Internal Chargeback & Financial Accuracy
+
+- $3.8M+ in previously unattributed annual Gaia platform charges correctly allocated to the owning division, enabling accurate financial reporting and significantly reducing escalations at quarterly close.
+- Billing cycle resolution time reduced from 22 business days to 4 business days, transforming cost allocation from a backward-looking reconciliation exercise to a near-real-time operational process.
+- Billing disputes per quarter dropped from ~52 to ~7 — a reduction of 87% — with residual disputes limited to legitimate edge cases around shared services workloads.
+- Manual reconciliation effort reduced from ~3.5 FTE per monthly cycle to less than 0.5 FTE, freeing Finance analysts for higher-value FinOps and cost optimization work.
+
+### Platform Operational Benefits
+
+- GTI gained a complete, live inventory of all workloads running on Gaia, by LOB, division, team, environment, datacenter, and platform type, for the first time. This supported capacity planning, rightsizing analysis, and platform cost optimization decisions.
+- The retroactive migration exercise surfaced 120 ownerless legacy workloads consuming live Gaia resources with no active team accountable for them. These were decommissioned, recovering an estimated $180K/year in idle platform capacity.
+- Gaia platform engineering was able to publish per-division capacity utilization reports to GTI leadership, enabling data-driven conversations about platform investment and quota allocation.
+
+### Security & Compliance
+
+- Security Operations gained immediate workload-to-team traceability for all Gaia workloads. Mean-time-to-triage for Gaia platform security incidents was reduced as the owning team could be identified directly from the workload name, without a manual CMDB lookup.
+- For regulatory and internal audit requests (OCC, internal risk reviews), any Gaia workload could be traced to its owning division and team in seconds rather than requiring a manual investigation spanning multiple systems.
+- Environment enforcement via the JRN schema enabled the Gaia platform team to apply environment-specific policies (high-availability SLAs, backup requirements, network segmentation rules) based on the `<environment>` segment of the JRN, a capability that did not exist before.
+
+### Foundation for Future Extensibility
+
+- **Public cloud readiness:** When JPMC began expanding workloads to public cloud, JRN's platform-agnostic schema was extended to cover resources on AWS and Azure without redesign, the same naming standard applied across the hybrid estate, giving Finance a unified attribution model from day one.
+- **Golden path adoption:** The JRN-compliant Helm chart templates and CF manifest templates became part of JPMC's internal platform engineering golden path, adopted by new teams as the standard starting point for Gaia deployments.
+- **Developer experience:** The shared CI linting module was adopted by teams beyond GTI, extending JRN compliance to application teams in other LOBs deploying on shared Gaia infrastructure.
