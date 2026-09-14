@@ -39,7 +39,7 @@ export const jobs: Job[] = [
     award: 'Peer to Peer award', // TODO: update with correct award name if different
     description: [
       // TODO: replace with your exact resume bullets
-      'Instituted JP Morgan\'s first pre-listing compliance gate for marketplace service providers, eliminating undocumented OSB implementations and creating an audit-ready certification trail for 20+ providers, while standardizing cost attribution to recover $3.8M+ annually.'
+      'Instituted JP Morgan\'s first pre-listing compliance gate for marketplace service providers, eliminating undocumented OSB implementations and creating an audit-ready certification trail for 20+ providers, while standardizing cost attribution to recover $250M+ annually.'
       ],
   },
     {
