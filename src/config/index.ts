@@ -9,7 +9,7 @@ export const siteConfig: SiteConfig = {
   tagline: 'Curious builder, systems thinker.',
   bio: [
     'Customer-centric AI product manager who\’s built a career out of ambiguity: messy integrations, competing client priorities, roadmaps nobody had prioritized yet.',
-    'At Microsoft, I sized TAM across Financial Services, Manufacturing, and Telecom and defined the GTM entry point for an AI data platform. At MishiPay, I shipped self-checkout solutions end-to-end for global retail clients using data-driven roadmaps and hypothesis-driven experimentation. At JP Morgan Chase, I drove cross-functional alignment across cloud infrastructure and compliance, recovering $3.8M+ annually.',
+    'At Microsoft, I sized TAM across Financial Services, Manufacturing, and Telecom and defined the GTM entry point for an AI data platform. At MishiPay, I shipped self-checkout solutions end-to-end for global retail clients using data-driven roadmaps and hypothesis-driven experimentation. At JP Morgan Chase, I drove cross-functional alignment across cloud infrastructure and compliance, recovering $250M+ annually.',
     'Most recently, I built an AI automation pipeline for a biotech startup using n8n, RAG, and vector search, turning a collection of proprietary documents into an instantly queryable internal knowledge base.'
   ],
   email: 'memittal@uw.edu',
