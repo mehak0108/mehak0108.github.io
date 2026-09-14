@@ -85,7 +85,7 @@ export const projects: Project[] = [
   type: 'internal',
   featured: true,
   metrics: [
-    { value: '$3.8M', label: 'Charges correctly allocated' },
+    { value: '$250M', label: 'Charges correctly allocated' },
     { value: '97%', label: 'Attribution coverage (from 61%)' },
     { value: '82%', label: 'Faster billing cycle' },
   ],
